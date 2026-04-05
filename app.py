@@ -16,7 +16,17 @@ st.markdown(f"""
     <style>
     .stApp {{ background-color: {COR_FUNDO}; }}
     
-    /* Negrito nas métricas e títulos */
+    /* Título principal limpo e em negrito */
+    .titulo-principal {{
+        text-align: center;
+        color: {COR_TEXTO};
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 800;
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }}
+
+    /* Negrito nas métricas */
     [data-testid="stMetricValue"] {{ 
         color: {COR_PRIMARIA}; 
         font-size: 2.5rem !important; 
@@ -30,7 +40,7 @@ st.markdown(f"""
         font-size: 1.1rem !important;
     }}
     
-    /* Grid de Abas Arredondadas com Negrito */
+    /* Grid de Abas Arredondadas */
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -105,7 +115,7 @@ def atualizar_saldo_aporte(valor):
     with open('saldo_aporte.txt', 'w') as f: f.write(str(valor))
 
 # 3. JANELA MODAL (DIALOG)
-@st.dialog("📝 **NOVO LANÇAMENTO**")
+@st.dialog("📝 NOVO LANÇAMENTO")
 def cadastrar_dialog():
     tipo = st.selectbox("**Operação**", ["Receita", "Gasto"])
     cat = st.selectbox("**Categoria**", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde", "Investimento"])
@@ -148,10 +158,11 @@ rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
 gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
-# 5. EXIBIÇÃO PRINCIPAL
-st.markdown("<h1 style='text-align: center;'>💼 **PLANEJAMENTO FINANCEIRO**</h1>", unsafe_allow_html=True)
-st.metric("**DISPONÍVEL EM CONTA**", f"R$ {saldo_cc:,.2f}")
-st.metric("**PATRIMÔNIO INVESTIDO**", f"R$ {total_inv:,.2f}")
+# 5. EXIBIÇÃO PRINCIPAL (CORREÇÃO DO TÍTULO AQUI)
+st.markdown('<p class="titulo-principal">PLANEJAMENTO FINANCEIRO</p>', unsafe_allow_html=True)
+
+st.metric("DISPONÍVEL EM CONTA", f"R$ {saldo_cc:,.2f}")
+st.metric("PATRIMÔNIO INVESTIDO", f"R$ {total_inv:,.2f}")
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["**📊 DASH**", "**📈 CARTEIRA**", "**🎯 METAS**", "**📅 ANUAL**", "**⚙️ AJUSTES**"])
 
