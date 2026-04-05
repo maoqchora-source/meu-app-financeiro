@@ -6,9 +6,9 @@ from datetime import date, datetime
 import webbrowser
 
 # 1. CONFIGURAÇÕES DE LAYOUT E CORES CORPORATIVAS
-st.set_page_config(page_title="Finanças Pro", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
-# Injeção de CSS para mudar a cara do App
+# Injeção de CSS para o visual sofisticado
 st.markdown("""
     <style>
     /* Fundo principal e textos */
@@ -59,7 +59,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. FUNÇÕES DE DADOS (Igual às anteriores)
+# 2. FUNÇÕES DE DADOS
 def carregar_dados(arquivo, colunas):
     if os.path.exists(arquivo):
         try:
@@ -128,14 +128,13 @@ gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
 # 5. LAYOUT PRINCIPAL
-st.title("💼 Finanças Corporativas")
+st.title("💼 Planejamento Financeiro")
 c1, c2 = st.columns(2)
 c1.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
 c2.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 DASHBOARD", "📈 CARTEIRA", "🎯 METAS", "📅 ANUAL", "⚙️ AJUSTES"])
 
-# Paleta de cores para os gráficos (Verde e Cinza)
 paleta_corp = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#adb5bd', '#6c757d', '#495057']
 
 with tab1:
