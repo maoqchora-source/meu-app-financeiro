@@ -68,7 +68,7 @@ with st.sidebar:
         st.success("Salvo!")
         st.rerun()
 
-# 4. PROCESSAMENTO DE VALORES
+# 4. PROCESSAMENTO
 if not df_invest.empty:
     df_invest['Valor_Atualizado'] = df_invest.apply(calcular_valor_atual, axis=1)
     total_inv = df_invest['Valor_Atualizado'].sum()
@@ -79,12 +79,12 @@ gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
 # 5. LAYOUT DE ABAS
-st.title("💎 Minhas Finanças")
+st.title("💎 Finanças Pro")
 c1, c2 = st.columns(2)
 c1.metric("Banco CC", f"R$ {saldo_cc:,.2f}")
 c2.metric("Investido", f"R$ {total_inv:,.2f}")
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Dash", "📈 Ativos", "🎯 Metas", "📅 Evolução Anual"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dash", "📈 Ativos", "🎯 Metas", "📅 Anual", "⚙️ Ajustes"])
 
 with tab1:
     if not df_transacoes.empty:
@@ -93,10 +93,10 @@ with tab1:
             fig = px.pie(df_gasto, values='Valor', names='Categoria', hole=0.4, title="Meus Gastos")
             st.plotly_chart(fig, use_container_width=True)
         else: st.info("Grave um 'Gasto' para ver o gráfico.")
-    else: st.info("Sem movimentações no banco.")
+    else: st.info("Sem movimentações.")
 
 with tab2:
-    st.subheader("💰 Carteira de Investimentos")
+    st.subheader("💰 Carteira")
     if st.session_state.saldo_para_aportar > 0:
         st.warning(f"Disponível: R$ {st.session_state.saldo_para_aportar:,.2f}")
         col_a, col_b = st.columns(2)
@@ -115,10 +115,9 @@ with tab2:
     st.divider()
     if not df_invest.empty:
         for i, row in df_invest.iterrows():
-            with st.expander(f"{row['Tipo_Ativo']} - R$ {row['Valor_Atualizado']:,.2f}"):
-                st.write(f"Meta: {row['Meta_Destino']}")
-                if st.button(f"🔍 Pesquisar", key=f"p_{i}"):
-                    webbrowser.open_new_tab(f"https://www.google.com/search?q=rentabilidade+{row['Tipo_Ativo']}")
+            with st.expander(f"{row['Tipo_Ativo']} - {row['Descricao']}"):
+                st.write(f"**Valor Atual:** R$ {row['Valor_Atualizado']:,.2f}")
+                st.write(f"**Meta:** {row['Meta_Destino']}")
 
 with tab3:
     st.subheader("🚩 Minhas Metas")
@@ -136,52 +135,53 @@ with tab3:
     st.divider()
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
-            acumulado = 0
-            if not df_invest.empty:
-                acumulado = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum()
+            acumulado = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
             progresso = min(acumulado / m['Valor_Objetivo'], 1.0)
             st.write(f"**{m['Nome_Meta']}**")
             st.progress(progresso)
             st.write(f"R$ {acumulado:,.2f} de R$ {m['Valor_Objetivo']:,.2f} ({progresso*100:.1f}%)")
 
 with tab4:
-    st.subheader("📊 Balanço Anual Detalhado")
-    
     if not df_transacoes.empty:
-        # Preparação dos dados para o gráfico mensal
         df_transacoes['Data'] = pd.to_datetime(df_transacoes['Data'])
         df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
-        
-        # Agrupar Receitas e Gastos por mês
         df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
-        
-        # Adicionar Investimentos no gráfico (calculado a partir dos aportes)
-        if not df_invest.empty:
-            df_inv_copy = df_invest.copy()
-            df_inv_copy['Data'] = pd.to_datetime(df_inv_copy['Data'])
-            df_inv_copy['Mes'] = df_inv_copy['Data'].dt.strftime('%b/%Y')
-            df_inv_mensal = df_inv_copy.groupby('Mes')['Valor_Aplicado'].sum().reset_index()
-            df_inv_mensal['Tipo'] = 'Investimento'
-            df_inv_mensal.rename(columns={'Valor_Aplicado': 'Valor'}, inplace=True)
-            df_mensal = pd.concat([df_mensal, df_inv_mensal], ignore_index=True)
-
-        # Gráfico de Colunas Agrupadas
-        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group',
-                          title="Comparativo Mensal: Receitas x Gastos x Investimentos",
-                          color_discrete_map={'Receita':'#00CC96', 'Gasto':'#EF553B', 'Investimento':'#636EFA'})
+        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', title="Evolução Mensal")
         st.plotly_chart(fig_anual, use_container_width=True)
 
-        # Placar Anual
-        st.divider()
-        st.write("### 🏆 Resumo Acumulado do Ano")
-        ca1, ca2, ca3, ca4 = st.columns(4)
-        total_ano_rec = df_transacoes[df_transacoes['Tipo']=='Receita']['Valor'].sum()
-        total_ano_gas = df_transacoes[df_transacoes['Tipo']=='Gasto']['Valor'].sum()
-        total_ano_inv = df_invest['Valor_Aplicado'].sum() if not df_invest.empty else 0
-        
-        ca1.metric("Faturamento Anual", f"R$ {total_ano_rec:,.2f}")
-        ca2.metric("Despesas Anuais", f"R$ {total_ano_gas:,.2f}")
-        ca3.metric("Aportes no Ano", f"R$ {total_ano_inv:,.2f}")
-        ca4.metric("Lucro Líquido", f"R$ {(total_ano_rec - total_ano_gas):,.2f}")
-    else:
-        st.info("Registre transações para visualizar a evolução anual.")
+with tab5:
+    st.subheader("🛠️ Gestão de Dados")
+    
+    # EDITAR BANCO CC
+    with st.expander("✏️ Editar/Excluir Transações (Banco CC)"):
+        if not df_transacoes.empty:
+            # st.data_editor cria uma tabela editável na tela!
+            df_trans_editada = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True, key="editor_trans")
+            if st.button("💾 Salvar Alterações no Banco"):
+                salvar_dados(df_trans_editada, 'banco_cc.csv')
+                st.success("Banco de transações atualizado!")
+                st.rerun()
+        else: st.info("Nenhuma transação para editar.")
+
+    # EDITAR INVESTIMENTOS
+    with st.expander("✏️ Editar/Excluir Investimentos"):
+        if not df_invest.empty:
+            df_inv_editada = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True, key="editor_inv")
+            if st.button("💾 Salvar Alterações nos Ativos"):
+                salvar_dados(df_inv_editada, 'investimentos.csv')
+                st.success("Investimentos atualizados!")
+                st.rerun()
+        else: st.info("Nenhum investimento para editar.")
+
+    st.divider()
+    
+    # LIMPAR TUDO (RESTAURAR)
+    st.error("💣 ZONA DE PERIGO")
+    if st.button("🚨 LIMPAR TUDO E REINICIAR APP"):
+        # Apagar os arquivos físicos
+        for arq in ['banco_cc.csv', 'investimentos.csv', 'metas.csv']:
+            if os.path.exists(arq):
+                os.remove(arq)
+        st.session_state.saldo_para_aportar = 0.0
+        st.warning("Todos os dados foram apagados. Recarregando...")
+        st.rerun()
