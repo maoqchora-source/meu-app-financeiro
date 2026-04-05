@@ -344,7 +344,10 @@ with tab5:
     st.divider()
     if st.button("🚨 ZERAR TODOS OS DADOS"):
         for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
-            if os.path.exists(a): os.remove(a)
+            if os.path.exists(a): 
+                os.remove(a)
         st.rerun()
 
-# 
+# 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
+if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
+    cadastrar_dialog()
