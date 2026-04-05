@@ -5,9 +5,61 @@ import os
 from datetime import date, datetime
 import webbrowser
 
-# 1. CONFIGURAÇÕES E BANCO DE DADOS
-st.set_page_config(page_title="Finanças Mobile Pro", layout="wide", initial_sidebar_state="collapsed")
+# 1. CONFIGURAÇÕES DE LAYOUT E CORES CORPORATIVAS
+st.set_page_config(page_title="Finanças Pro", layout="wide", initial_sidebar_state="collapsed")
 
+# Injeção de CSS para mudar a cara do App
+st.markdown("""
+    <style>
+    /* Fundo principal e textos */
+    .stApp {
+        background-color: #f8f9fa;
+    }
+    h1, h2, h3 {
+        color: #2c3e50 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Customização das abas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: #ffffff;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 40px;
+        border-radius: 5px;
+        background-color: #f1f3f5;
+        color: #495057;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2d6a4f !important; /* Verde Corporativo */
+        color: white !important;
+    }
+
+    /* Estilização dos Cartões de Métricas */
+    [data-testid="stMetricValue"] {
+        color: #2d6a4f;
+    }
+    
+    /* Botões */
+    .stButton>button {
+        background-color: #2d6a4f;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        width: 100%;
+    }
+    .stButton>button:hover {
+        background-color: #1b4332;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. FUNÇÕES DE DADOS (Igual às anteriores)
 def carregar_dados(arquivo, colunas):
     if os.path.exists(arquivo):
         try:
@@ -21,12 +73,10 @@ def carregar_dados(arquivo, colunas):
 def salvar_dados(df, arquivo):
     df.to_csv(arquivo, index=False)
 
-# Definição das colunas oficiais
 cols_trans = ['Data', 'Tipo', 'Categoria', 'Descricao', 'Valor']
 cols_inv = ['Data', 'Tipo_Ativo', 'Descricao', 'Valor_Aplicado', 'Taxa_Anual', 'Meta_Destino']
 cols_metas = ['Nome_Meta', 'Valor_Objetivo']
 
-# Inicialização
 df_transacoes = carregar_dados('banco_cc.csv', cols_trans)
 df_invest = carregar_dados('investimentos.csv', cols_inv)
 df_metas = carregar_dados('metas.csv', cols_metas)
@@ -34,7 +84,6 @@ df_metas = carregar_dados('metas.csv', cols_metas)
 if 'saldo_para_aportar' not in st.session_state:
     st.session_state.saldo_para_aportar = 0.0
 
-# 2. LÓGICA DE RENDIMENTO
 def calcular_valor_atual(row):
     try:
         data_inv = row['Data']
@@ -46,9 +95,9 @@ def calcular_valor_atual(row):
         return row['Valor_Aplicado'] * (1 + taxa_diaria)**dias
     except: return row['Valor_Aplicado']
 
-# 3. SIDEBAR (CADASTRO)
+# 3. SIDEBAR
 with st.sidebar:
-    st.header("📲 Novo Lançamento")
+    st.markdown("### 🏦 Novo Lançamento")
     tipo = st.selectbox("Operação", ["Receita", "Gasto"])
     cat = st.selectbox("Categoria", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde"])
     desc = st.text_input("Descrição")
@@ -78,110 +127,93 @@ rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
 gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
-# 5. LAYOUT DE ABAS
-st.title("💎 Finanças Pro")
+# 5. LAYOUT PRINCIPAL
+st.title("💼 Finanças Corporativas")
 c1, c2 = st.columns(2)
-c1.metric("Banco CC", f"R$ {saldo_cc:,.2f}")
-c2.metric("Investido", f"R$ {total_inv:,.2f}")
+c1.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
+c2.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dash", "📈 Ativos", "🎯 Metas", "📅 Anual", "⚙️ Ajustes"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 DASHBOARD", "📈 CARTEIRA", "🎯 METAS", "📅 ANUAL", "⚙️ AJUSTES"])
+
+# Paleta de cores para os gráficos (Verde e Cinza)
+paleta_corp = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#adb5bd', '#6c757d', '#495057']
 
 with tab1:
     if not df_transacoes.empty:
         df_gasto = df_transacoes[df_transacoes['Tipo']=='Gasto']
         if not df_gasto.empty:
-            fig = px.pie(df_gasto, values='Valor', names='Categoria', hole=0.4, title="Meus Gastos")
+            fig = px.pie(df_gasto, values='Valor', names='Categoria', hole=0.5, 
+                         color_discrete_sequence=paleta_corp, title="Distribuição de Custos")
             st.plotly_chart(fig, use_container_width=True)
-        else: st.info("Grave um 'Gasto' para ver o gráfico.")
-    else: st.info("Sem movimentações.")
+        else: st.info("Sem gastos registrados.")
+    else: st.info("Sem dados.")
 
 with tab2:
-    st.subheader("💰 Carteira")
+    st.subheader("🏦 Detalhamento de Ativos")
     if st.session_state.saldo_para_aportar > 0:
-        st.warning(f"Disponível: R$ {st.session_state.saldo_para_aportar:,.2f}")
-        col_a, col_b = st.columns(2)
-        t_at = col_a.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
-        tx_at = col_b.number_input("Taxa Anual %", value=12.0)
-        nm_at = st.text_input("Nome do Papel")
-        m_dest = st.selectbox("Destinar p/ Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
-        
-        if st.button("Confirmar Investimento"):
-            novo = pd.DataFrame([[date.today(), t_at, nm_at, st.session_state.saldo_para_aportar, tx_at, m_dest]], columns=cols_inv)
-            df_invest = pd.concat([df_invest, novo], ignore_index=True)
-            salvar_dados(df_invest, 'investimentos.csv')
-            st.session_state.saldo_para_aportar = 0
-            st.rerun()
+        with st.container():
+            st.markdown(f"**Aporte Disponível: R$ {st.session_state.saldo_para_aportar:,.2f}**")
+            col_a, col_b = st.columns(2)
+            t_at = col_a.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
+            tx_at = col_b.number_input("Taxa Anual %", value=12.0)
+            nm_at = st.text_input("Nome do Papel")
+            m_dest = st.selectbox("Destinar p/ Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
+            if st.button("Confirmar Investimento"):
+                novo = pd.DataFrame([[date.today(), t_at, nm_at, st.session_state.saldo_para_aportar, tx_at, m_dest]], columns=cols_inv)
+                df_invest = pd.concat([df_invest, novo], ignore_index=True)
+                salvar_dados(df_invest, 'investimentos.csv')
+                st.session_state.saldo_para_aportar = 0
+                st.rerun()
     
-    st.divider()
     if not df_invest.empty:
-        for i, row in df_invest.iterrows():
-            with st.expander(f"{row['Tipo_Ativo']} - {row['Descricao']}"):
-                st.write(f"**Valor Atual:** R$ {row['Valor_Atualizado']:,.2f}")
-                st.write(f"**Meta:** {row['Meta_Destino']}")
+        st.dataframe(df_invest[['Tipo_Ativo', 'Descricao', 'Valor_Atualizado', 'Meta_Destino']], use_container_width=True)
 
 with tab3:
-    st.subheader("🚩 Minhas Metas")
-    with st.expander("➕ Criar Nova Meta"):
-        n_meta = st.text_input("Nome (Ex: Viagem)")
-        v_meta = st.number_input("Valor Objetivo R$", min_value=1.0)
+    st.subheader("🚩 Objetivos Estratégicos")
+    with st.expander("➕ Nova Meta"):
+        n_meta = st.text_input("Nome")
+        v_meta = st.number_input("Valor Objetivo", min_value=1.0)
         if st.button("Salvar Meta"):
             if n_meta:
                 nova_m = pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)
                 df_metas = pd.concat([df_metas, nova_m], ignore_index=True)
                 salvar_dados(df_metas, 'metas.csv')
-                st.success("Meta criada!")
                 st.rerun()
 
-    st.divider()
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
             acumulado = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
             progresso = min(acumulado / m['Valor_Objetivo'], 1.0)
             st.write(f"**{m['Nome_Meta']}**")
             st.progress(progresso)
-            st.write(f"R$ {acumulado:,.2f} de R$ {m['Valor_Objetivo']:,.2f} ({progresso*100:.1f}%)")
+            st.caption(f"R$ {acumulado:,.2f} de R$ {m['Valor_Objetivo']:,.2f}")
 
 with tab4:
     if not df_transacoes.empty:
         df_transacoes['Data'] = pd.to_datetime(df_transacoes['Data'])
         df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
         df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
-        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', title="Evolução Mensal")
+        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', 
+                          color_discrete_map={'Receita':'#2d6a4f', 'Gasto':'#adb5bd'},
+                          title="Análise Mensal de Fluxo")
         st.plotly_chart(fig_anual, use_container_width=True)
 
 with tab5:
-    st.subheader("🛠️ Gestão de Dados")
-    
-    # EDITAR BANCO CC
-    with st.expander("✏️ Editar/Excluir Transações (Banco CC)"):
-        if not df_transacoes.empty:
-            # st.data_editor cria uma tabela editável na tela!
-            df_trans_editada = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True, key="editor_trans")
-            if st.button("💾 Salvar Alterações no Banco"):
-                salvar_dados(df_trans_editada, 'banco_cc.csv')
-                st.success("Banco de transações atualizado!")
-                st.rerun()
-        else: st.info("Nenhuma transação para editar.")
+    st.subheader("⚙️ Administração de Dados")
+    with st.expander("✏️ Editar Transações"):
+        df_trans_editada = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
+        if st.button("Salvar Alterações Banco"):
+            salvar_dados(df_trans_editada, 'banco_cc.csv')
+            st.rerun()
 
-    # EDITAR INVESTIMENTOS
-    with st.expander("✏️ Editar/Excluir Investimentos"):
-        if not df_invest.empty:
-            df_inv_editada = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True, key="editor_inv")
-            if st.button("💾 Salvar Alterações nos Ativos"):
-                salvar_dados(df_inv_editada, 'investimentos.csv')
-                st.success("Investimentos atualizados!")
-                st.rerun()
-        else: st.info("Nenhum investimento para editar.")
+    with st.expander("✏️ Editar Investimentos"):
+        df_inv_editada = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True)
+        if st.button("Salvar Alterações Ativos"):
+            salvar_dados(df_inv_editada, 'investimentos.csv')
+            st.rerun()
 
     st.divider()
-    
-    # LIMPAR TUDO (RESTAURAR)
-    st.error("💣 ZONA DE PERIGO")
-    if st.button("🚨 LIMPAR TUDO E REINICIAR APP"):
-        # Apagar os arquivos físicos
+    if st.button("🚨 RESTAURAR APP (APAGAR TUDO)"):
         for arq in ['banco_cc.csv', 'investimentos.csv', 'metas.csv']:
-            if os.path.exists(arq):
-                os.remove(arq)
-        st.session_state.saldo_para_aportar = 0.0
-        st.warning("Todos os dados foram apagados. Recarregando...")
+            if os.path.exists(arq): os.remove(arq)
         st.rerun()
