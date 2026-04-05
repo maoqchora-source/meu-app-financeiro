@@ -168,10 +168,7 @@ with tab5:
     
     st.divider()
     if st.button("🚨 ZERAR TODOS OS DADOS"):
-Ivanildo, compilei seu código com as melhorias visuais que sugeri. Agora ele está mais moderno e atrativo, com **cards estilizados**, **gradiente nos títulos**, **gauge chart para metas** e **feedback com toast**.  
-
-Você pode copiar e colar esse código direto no seu projeto Streamlit:
-
+        
 ```python
 import streamlit as st
 import pandas as pd
