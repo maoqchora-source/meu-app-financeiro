@@ -348,6 +348,6 @@ with tab5:
                 os.remove(a)
         st.rerun()
 
-# 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
+# 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
 if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
     cadastrar_dialog()
