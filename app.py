@@ -15,10 +15,22 @@ COR_TEXTO = '#2c3e50'
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {COR_FUNDO}; }}
-    [data-testid="stMetricValue"] {{ color: {COR_PRIMARIA}; font-size: 2.5rem !important; text-align: center; }}
-    [data-testid="stMetricLabel"] {{ text-align: center; font-weight: bold; color: {COR_TEXTO}; }}
     
-    /* Grid de Abas Arredondadas */
+    /* Negrito nas métricas e títulos */
+    [data-testid="stMetricValue"] {{ 
+        color: {COR_PRIMARIA}; 
+        font-size: 2.5rem !important; 
+        text-align: center; 
+        font-weight: 800 !important; 
+    }}
+    [data-testid="stMetricLabel"] {{ 
+        text-align: center; 
+        font-weight: bold !important; 
+        color: {COR_TEXTO}; 
+        font-size: 1.1rem !important;
+    }}
+    
+    /* Grid de Abas Arredondadas com Negrito */
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -32,30 +44,30 @@ st.markdown(f"""
         box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
         border: 1px solid #eee;
         height: 80px;
+        font-weight: bold !important;
     }}
     .stTabs [aria-selected="true"] {{
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
     }}
 
-    /* Estilo do Botão GRAVAR DADOS (Largo e Fixo) */
+    /* Botão GRAVAR DADOS Estilizado */
     div[data-testid="stVerticalBlock"] > div:has(button[key="btn_gravar"]) {{
         position: fixed;
         bottom: 20px;
         left: 5%;
         right: 5%;
         z-index: 999;
-        text-align: center;
     }}
     .stButton>button[key="btn_gravar"] {{
         width: 90vw !important;
-        height: 55px !important;
-        border-radius: 12px !important;
+        height: 60px !important;
+        border-radius: 15px !important;
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.2) !important;
+        font-size: 20px !important;
+        font-weight: 900 !important;
+        box-shadow: 0px 6px 20px rgba(0,0,0,0.3) !important;
         border: none !important;
     }}
     </style>
@@ -93,18 +105,18 @@ def atualizar_saldo_aporte(valor):
     with open('saldo_aporte.txt', 'w') as f: f.write(str(valor))
 
 # 3. JANELA MODAL (DIALOG)
-@st.dialog("📝 Novo Lançamento")
+@st.dialog("📝 **NOVO LANÇAMENTO**")
 def cadastrar_dialog():
-    tipo = st.selectbox("Operação", ["Receita", "Gasto"])
-    cat = st.selectbox("Categoria", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde", "Investimento"])
-    desc = st.text_input("Descrição")
-    valor_in = st.number_input("Valor R$", min_value=0.0)
-    data_in = st.date_input("Data")
+    tipo = st.selectbox("**Operação**", ["Receita", "Gasto"])
+    cat = st.selectbox("**Categoria**", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde", "Investimento"])
+    desc = st.text_input("**Descrição**")
+    valor_in = st.number_input("**Valor R$**", min_value=0.0)
+    data_in = st.date_input("**Data**")
     perc_inv = 0
     if tipo == "Receita":
-        perc_inv = st.slider("Investir (%)", 0, 100, 0)
+        perc_inv = st.slider("**Investir (%)**", 0, 100, 0)
     
-    if st.button("Confirmar e Salvar"):
+    if st.button("**CONFIRMAR E SALVAR**"):
         if valor_in > 0:
             global df_transacoes
             nova = pd.DataFrame([[data_in, tipo, cat, desc, valor_in]], columns=cols_trans)
@@ -117,10 +129,10 @@ def cadastrar_dialog():
                 atualizar_saldo_aporte(st.session_state.saldo_para_aportar + v_inv)
             
             salvar_dados(df_transacoes, 'banco_cc.csv')
-            st.success("Dados gravados!")
+            st.success("**DADOS GRAVADOS COM SUCESSO!**")
             st.rerun()
 
-# 4. PROCESSAMENTO E MÉTRICAS
+# 4. PROCESSAMENTO
 if not df_invest.empty:
     def calc_atual(row):
         try:
@@ -136,49 +148,51 @@ rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
 gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
-# EXIBIÇÃO
-st.markdown("<h2 style='text-align: center; margin-bottom: 20px;'>💼 Planejamento Financeiro</h2>", unsafe_allow_html=True)
-st.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
-st.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
+# 5. EXIBIÇÃO PRINCIPAL
+st.markdown("<h1 style='text-align: center;'>💼 **PLANEJAMENTO FINANCEIRO**</h1>", unsafe_allow_html=True)
+st.metric("**DISPONÍVEL EM CONTA**", f"R$ {saldo_cc:,.2f}")
+st.metric("**PATRIMÔNIO INVESTIDO**", f"R$ {total_inv:,.2f}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dash", "📈 Carteira", "🎯 Metas", "📅 Anual", "⚙️ Ajustes"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["**📊 DASH**", "**📈 CARTEIRA**", "**🎯 METAS**", "**📅 ANUAL**", "**⚙️ AJUSTES**"])
 
 with tab1:
+    st.markdown("### **DISTRIBUIÇÃO DE GASTOS**")
     if not df_transacoes.empty:
         df_g = df_transacoes[(df_transacoes['Tipo']=='Gasto') & (df_transacoes['Categoria']!='Investimento')]
         if not df_g.empty:
             fig = px.pie(df_g, values='Valor', names='Categoria', hole=0.5, color_discrete_sequence=['#2d6a4f', '#40916c', '#74c69d', '#95d5b2'])
             st.plotly_chart(fig, use_container_width=True)
-    else: st.info("Nenhum dado para exibir no Dashboard.")
+    else: st.info("**NENHUM DADO REGISTRADO AINDA.**")
 
 with tab2:
-    st.subheader("Ativos Atuais")
+    st.subheader("**CARTEIRA DE ATIVOS**")
     if st.session_state.saldo_para_aportar > 0:
-        st.info(f"💰 Saldo para Aplicar: R$ {st.session_state.saldo_para_aportar:,.2f}")
+        st.warning(f"**💰 SALDO PARA APLICAR: R$ {st.session_state.saldo_para_aportar:,.2f}**")
     st.dataframe(df_invest, use_container_width=True)
 
 with tab3:
-    st.subheader("Acompanhamento de Metas")
+    st.subheader("**PROGRESSO DAS METAS**")
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
             acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
-            st.write(f"**{m['Nome_Meta']}**")
+            st.write(f"**{m['Nome_Meta'].upper()}**")
             st.progress(min(acum/m['Valor_Objetivo'], 1.0))
-            st.caption(f"R$ {acum:,.2f} de R$ {m['Valor_Objetivo']:,.2f}")
+            st.caption(f"**R$ {acum:,.2f} DE R$ {m['Valor_Objetivo']:,.2f}**")
 
 with tab5:
-    st.subheader("Administração")
-    with st.expander("✏️ Editar Transações"):
+    st.subheader("**ADMINISTRAÇÃO DO APP**")
+    with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
         df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-        if st.button("Salvar Banco CC"):
+        if st.button("**SALVAR ALTERAÇÕES**"):
             salvar_dados(df_e, 'banco_cc.csv')
             st.rerun()
     
-    if st.button("🚨 Limpar Todos os Dados"):
+    st.divider()
+    if st.button("**🚨 ZERAR TODOS OS DADOS**"):
         for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
             if os.path.exists(a): os.remove(a)
         st.rerun()
 
-# BOTÃO "GRAVAR DADOS" (Largo na parte inferior)
+# 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
 if st.button("GRAVAR DADOS", key="btn_gravar"):
     cadastrar_dialog()
