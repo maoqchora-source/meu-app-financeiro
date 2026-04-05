@@ -7,18 +7,108 @@ from datetime import date, datetime
 # 1. CONFIGURAÇÕES DE LAYOUT E CORES
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
-st.markdown("""
+# Cores Corporativas
+COR_PRIMARIA = '#2d6a4f'  # Verde Escuro
+COR_FUNDO = '#f8f9fa'    # Cinza Claro
+COR_CARD = '#ffffff'     # Branco
+COR_TEXTO = '#2c3e50'    # Grafite
+
+# Injeção de CSS para o novo visual moderno
+st.markdown(f"""
     <style>
-    .stApp { background-color: #f8f9fa; }
-    h1, h2, h3 { color: #2c3e50 !important; font-family: 'Segoe UI', sans-serif; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 10px; box-shadow: 0px 2px 5px rgba(0,0,0,0.05); }
-    .stTabs [aria-selected="true"] { background-color: #2d6a4f !important; color: white !important; }
-    [data-testid="stMetricValue"] { color: #2d6a4f; }
-    .stButton>button { background-color: #2d6a4f; color: white; border-radius: 8px; width: 100%; }
+    /* Fundo principal */
+    .stApp {{
+        background-color: {COR_FUNDO};
+    }}
+
+    /* Estilização dos Títulos */
+    h1, h2, h3 {{
+        color: {COR_TEXTO} !important;
+        font-family: 'Segoe UI', sans-serif;
+        text-align: center;
+    }}
+
+    /* Métricas em Destaque no Topo */
+    [data-testid="stMetricValue"] {{
+        color: {COR_PRIMARIA};
+        font-size: 3rem !important;
+        text-align: center;
+    }}
+    [data-testid="stMetricLabel"] {{
+        text-align: center;
+        font-size: 1.2rem !important;
+    }}
+
+    /* Container das Abas (Grid) */
+    .stTabs [data-baseweb="tab-list"] {{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        background-color: transparent;
+        padding: 0;
+        border: none;
+    }}
+
+    /* Estilização de cada Aba (Caixa Arredondada) */
+    .stTabs [data-baseweb="tab"] {{
+        background-color: {COR_CARD};
+        color: {COR_TEXTO};
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+        border: 1px solid #e0e0e0;
+        transition: transform 0.2s;
+        height: auto;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        transform: translateY(-5px);
+    }}
+    .stTabs [aria-selected="true"] {{
+        background-color: {COR_PRIMARIA} !important;
+        color: white !important;
+        border: none;
+    }}
+
+    /* Botão Gravar Dados Flutuante (FAB) */
+    .fab {{
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background-color: {COR_PRIMARIA};
+        color: white;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 30px;
+        border: none;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+        cursor: pointer;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+    .fab:hover {{
+        background-color: #1b4332;
+    }}
+
+    /* Janela Modal (Popup) */
+    [data-testid="stModal"] {{
+        background-color: {COR_FUNDO};
+        border-radius: 20px;
+        padding: 20px;
+    }}
+
+    /* Ajustes Gerais */
+    .stDataFrame {{
+        border-radius: 10px;
+        overflow: hidden;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# 2. FUNÇÕES DE DADOS
+# 2. FUNÇÕES DE DADOS (Igual às anteriores)
 def carregar_dados(arquivo, colunas):
     if os.path.exists(arquivo):
         try:
@@ -61,59 +151,35 @@ def calcular_valor_atual(row):
         return row['Valor_Aplicado'] * (1 + taxa_diaria)**dias
     except: return row['Valor_Aplicado']
 
-# 3. SIDEBAR (LOGICA CORRIGIDA)
-with st.sidebar:
-    st.markdown("### 🏦 Novo Lançamento")
-    tipo = st.selectbox("Operação", ["Receita", "Gasto"])
-    cat = st.selectbox("Categoria", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde", "Investimento"])
-    desc = st.text_input("Descrição")
-    valor_input = st.number_input("Valor R$", min_value=0.0)
-    data_in = st.date_input("Data")
-    
-    perc_inv = 0
-    if tipo == "Receita":
-        perc_inv = st.slider("Destinar p/ Investimento (%)", 0, 100, 0)
-    
-    if st.button("🚀 GRAVAR"):
-        if valor_input > 0:
-            # 1. Registra a transação principal
-            nova_trans = pd.DataFrame([[data_in, tipo, cat, desc, valor_input]], columns=cols_trans)
-            df_transacoes = pd.concat([df_transacoes, nova_trans], ignore_index=True)
-            
-            # 2. Se for Receita com % de investimento, desconta do saldo
-            if tipo == "Receita" and perc_inv > 0:
-                valor_investir = (valor_input * perc_inv) / 100
-                # Registra um "Gasto" de categoria Investimento para abater do saldo em conta
-                trans_ajuste = pd.DataFrame([[data_in, "Gasto", "Investimento", f"Reserva p/ Investir ({desc})", valor_investir]], columns=cols_trans)
-                df_transacoes = pd.concat([df_transacoes, trans_ajuste], ignore_index=True)
-                
-                # Aumenta o saldo que fica disponível na aba Carteira
-                atualizar_saldo_aporte(st.session_state.saldo_para_aportar + valor_investir)
-            
-            salvar_dados(df_transacoes, 'banco_cc.csv')
-            st.success("Lançado com sucesso!")
-            st.rerun()
-
-# 4. PROCESSAMENTO
+# 3. PROCESSAMENTO
 if not df_invest.empty:
     df_invest['Valor_Atualizado'] = df_invest.apply(calcular_valor_atual, axis=1)
     total_inv = df_invest['Valor_Atualizado'].sum()
 else: total_inv = 0
 
-# O saldo em conta agora considera os "Gastos" de investimento como saídas
 rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
 gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
-# 5. LAYOUT
+# 4. LAYOUT PRINCIPAL
 st.title("💼 Planejamento Financeiro")
-c1, c2 = st.columns(2)
-c1.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
-c2.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 DASHBOARD", "📈 CARTEIRA", "🎯 METAS", "📅 ANUAL", "⚙️ AJUSTES"])
+# Métricas em Duas Linhas no Topo
+st.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
+st.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
+st.divider()
 
-paleta_corp = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#adb5bd', '#6c757d', '#495057']
+# Abas com Ícones e Caixas Arredondadas (Grid 3x2)
+# Usando Markdown para renderizar os ícones e texto dentro das abas
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊\nDashboard", 
+    "📈\nCarteira", 
+    "🎯\nMetas", 
+    "📅\nAnual", 
+    "⚙️\nAjustes"
+])
+
+paleta_corp = [COR_PRIMARIA, '#40916c', '#52b788', '#74c69d', '#95d5b2', '#adb5bd', '#6c757d', '#495057']
 
 with tab1:
     if not df_transacoes.empty:
@@ -121,8 +187,9 @@ with tab1:
         if not df_gasto.empty:
             fig = px.pie(df_gasto, values='Valor', names='Categoria', hole=0.5, color_discrete_sequence=paleta_corp, title="Gastos Reais (Excluindo Reservas)")
             st.plotly_chart(fig, use_container_width=True)
-        st.write("**Resumo de Fluxo:**")
-        st.write(f"Receitas: R$ {rec:,.2f} | Saídas/Reservas: R$ {gas:,.2f}")
+        st.markdown("### Resumo de Fluxo")
+        st.write(f"**Receitas:** R$ {rec:,.2f} | **Saídas/Reservas:** R$ {gas:,.2f}")
+    else: st.info("Sem dados.")
 
 with tab2:
     st.subheader("🏦 Carteira de Ativos")
@@ -171,7 +238,7 @@ with tab4:
         df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
         df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
         fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', 
-                          color_discrete_map={'Receita':'#2d6a4f', 'Gasto':'#adb5bd'})
+                          color_discrete_map={'Receita':COR_PRIMARIA, 'Gasto':'#adb5bd'})
         st.plotly_chart(fig_anual, use_container_width=True)
 
 with tab5:
@@ -194,3 +261,78 @@ with tab5:
             if os.path.exists(arq): os.remove(arq)
         atualizar_saldo_aporte(0.0)
         st.rerun()
+
+# 5. BOTÃO FLUTUANTE E JANELA MODAL DE CADASTRO
+# Botão FAB usando HTML/CSS
+st.markdown('<button class="fab" onclick="document.getElementById(\'modal-cadastro\').style.display=\'block\'">+</button>', unsafe_allow_html=True)
+
+# Janela Modal usando st.experimental_dialog (ou st.modal se disponível em versões mais recentes)
+# Para versões do Streamlit que não suportam dialog, usaremos uma aproximação com expander/container
+# que abre no topo da tela.
+
+@st.experimental_dialog("📝 Novo Lançamento")
+def cadastrar():
+    st.write("Preencha as informações abaixo:")
+    tipo = st.selectbox("Operação", ["Receita", "Gasto"])
+    cat = st.selectbox("Categoria", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde", "Investimento"])
+    desc = st.text_input("Descrição")
+    valor_input = st.number_input("Valor R$", min_value=0.0)
+    data_in = st.date_input("Data")
+    
+    perc_inv = 0
+    if tipo == "Receita":
+        perc_inv = st.slider("Destinar p/ Investimento (%)", 0, 100, 0)
+    
+    if st.button("🚀 GRAVAR"):
+        if valor_input > 0:
+            # Lógica de gravação (igual à anterior)
+            # Acessando as variáveis globais dentro da função dialog
+            global df_transacoes
+            
+            nova_trans = pd.DataFrame([[data_in, tipo, cat, desc, valor_input]], columns=cols_trans)
+            df_transacoes = pd.concat([df_transacoes, nova_trans], ignore_index=True)
+            
+            if tipo == "Receita" and perc_inv > 0:
+                valor_investir = (valor_input * perc_inv) / 100
+                trans_ajuste = pd.DataFrame([[data_in, "Gasto", "Investimento", f"Reserva p/ Investir ({desc})", valor_investir]], columns=cols_trans)
+                df_transacoes = pd.concat([df_transacoes, trans_ajuste], ignore_index=True)
+                atualizar_saldo_aporte(st.session_state.saldo_para_aportar + valor_investir)
+            
+            salvar_dados(df_transacoes, 'banco_cc.csv')
+            st.success("Lançado com sucesso!")
+            st.rerun()
+
+# Lógica para abrir a modal quando o botão FAB for clicado
+# Como o Streamlit não tem eventos onclick nativos para HTML, usamos uma gambiarra
+# com query params para detectar o clique. Mas a forma mais estável no Streamlit Cloud
+# é usar um botão nativo estilizado como FAB.
+
+# Vamos usar um botão nativo do Streamlit estilizado como FAB
+col1, col2, col3 = st.columns([10, 1, 1]) # Colunas para posicionar o botão à direita
+with col2:
+    # Botão "+" estilizado com CSS
+    if st.button("+", key="fab_button"):
+        cadastrar()
+
+# Estilização específica para o botão nativo "+" parecer um FAB
+st.markdown("""
+    <style>
+    div[data-testid="stButton"] button[key="fab_button"] {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background-color: #2d6a4f;
+        color: white;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 30px;
+        border: none;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+        z-index: 1000;
+    }
+    div[data-testid="stButton"] button[key="fab_button"]:hover {
+        background-color: #1b4332;
+    }
+    </style>
+    """, unsafe_allow_html=True)
