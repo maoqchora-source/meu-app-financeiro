@@ -16,13 +16,14 @@ st.markdown(f"""
     <style>
     .stApp {{ background-color: {COR_FUNDO}; }}
     [data-testid="stMetricValue"] {{ color: {COR_PRIMARIA}; font-size: 2.5rem !important; text-align: center; }}
-    [data-testid="stMetricLabel"] {{ text-align: center; }}
+    [data-testid="stMetricLabel"] {{ text-align: center; font-weight: bold; color: {COR_TEXTO}; }}
     
     /* Grid de Abas Arredondadas */
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
+        margin-bottom: 20px;
     }}
     .stTabs [data-baseweb="tab"] {{
         background-color: white;
@@ -30,27 +31,32 @@ st.markdown(f"""
         padding: 15px;
         box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
         border: 1px solid #eee;
+        height: 80px;
     }}
     .stTabs [aria-selected="true"] {{
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
     }}
 
-    /* Estilo do Botão Flutuante */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="fab"]) {{
+    /* Estilo do Botão GRAVAR DADOS (Largo e Fixo) */
+    div[data-testid="stVerticalBlock"] > div:has(button[key="btn_gravar"]) {{
         position: fixed;
-        bottom: 30px;
-        right: 30px;
+        bottom: 20px;
+        left: 5%;
+        right: 5%;
         z-index: 999;
+        text-align: center;
     }}
-    .stButton>button[key="fab"] {{
-        width: 60px !important;
-        height: 60px !important;
-        border-radius: 50% !important;
+    .stButton>button[key="btn_gravar"] {{
+        width: 90vw !important;
+        height: 55px !important;
+        border-radius: 12px !important;
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
-        font-size: 30px !important;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.3) !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.2) !important;
+        border: none !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -98,7 +104,7 @@ def cadastrar_dialog():
     if tipo == "Receita":
         perc_inv = st.slider("Investir (%)", 0, 100, 0)
     
-    if st.button("Gravar Dados"):
+    if st.button("Confirmar e Salvar"):
         if valor_in > 0:
             global df_transacoes
             nova = pd.DataFrame([[data_in, tipo, cat, desc, valor_in]], columns=cols_trans)
@@ -111,7 +117,7 @@ def cadastrar_dialog():
                 atualizar_saldo_aporte(st.session_state.saldo_para_aportar + v_inv)
             
             salvar_dados(df_transacoes, 'banco_cc.csv')
-            st.success("Salvo!")
+            st.success("Dados gravados!")
             st.rerun()
 
 # 4. PROCESSAMENTO E MÉTRICAS
@@ -131,7 +137,7 @@ gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
 # EXIBIÇÃO
-st.markdown("<h2 style='text-align: center;'>💼 Planejamento Financeiro</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; margin-bottom: 20px;'>💼 Planejamento Financeiro</h2>", unsafe_allow_html=True)
 st.metric("Disponível em Conta", f"R$ {saldo_cc:,.2f}")
 st.metric("Patrimônio Investido", f"R$ {total_inv:,.2f}")
 
@@ -141,32 +147,38 @@ with tab1:
     if not df_transacoes.empty:
         df_g = df_transacoes[(df_transacoes['Tipo']=='Gasto') & (df_transacoes['Categoria']!='Investimento')]
         if not df_g.empty:
-            fig = px.pie(df_g, values='Valor', names='Categoria', hole=0.5, color_discrete_sequence=['#2d6a4f', '#74c69d', '#adb5bd'])
+            fig = px.pie(df_g, values='Valor', names='Categoria', hole=0.5, color_discrete_sequence=['#2d6a4f', '#40916c', '#74c69d', '#95d5b2'])
             st.plotly_chart(fig, use_container_width=True)
-    else: st.info("Sem dados.")
+    else: st.info("Nenhum dado para exibir no Dashboard.")
 
 with tab2:
+    st.subheader("Ativos Atuais")
     if st.session_state.saldo_para_aportar > 0:
-        st.warning(f"Reserva p/ Aplicar: R$ {st.session_state.saldo_para_aportar:,.2f}")
-        if st.button("Aplicar Reserva"):
-            # Aqui você pode adicionar lógica rápida ou apenas informar para usar o Ajustes
-            pass
+        st.info(f"💰 Saldo para Aplicar: R$ {st.session_state.saldo_para_aportar:,.2f}")
     st.dataframe(df_invest, use_container_width=True)
 
 with tab3:
+    st.subheader("Acompanhamento de Metas")
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
             acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
             st.write(f"**{m['Nome_Meta']}**")
             st.progress(min(acum/m['Valor_Objetivo'], 1.0))
+            st.caption(f"R$ {acum:,.2f} de R$ {m['Valor_Objetivo']:,.2f}")
 
 with tab5:
-    st.subheader("Configurações")
-    if st.button("Limpar Todos os Dados"):
+    st.subheader("Administração")
+    with st.expander("✏️ Editar Transações"):
+        df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
+        if st.button("Salvar Banco CC"):
+            salvar_dados(df_e, 'banco_cc.csv')
+            st.rerun()
+    
+    if st.button("🚨 Limpar Todos os Dados"):
         for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
             if os.path.exists(a): os.remove(a)
         st.rerun()
 
-# BOTÃO FLUTUANTE (FAB)
-if st.button("+", key="fab"):
+# BOTÃO "GRAVAR DADOS" (Largo na parte inferior)
+if st.button("GRAVAR DADOS", key="btn_gravar"):
     cadastrar_dialog()
