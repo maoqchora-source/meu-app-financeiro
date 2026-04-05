@@ -1,0 +1,187 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import os
+from datetime import date, datetime
+import webbrowser
+
+# 1. CONFIGURAÇÕES E BANCO DE DADOS
+st.set_page_config(page_title="Finanças Mobile Pro", layout="wide", initial_sidebar_state="collapsed")
+
+def carregar_dados(arquivo, colunas):
+    if os.path.exists(arquivo):
+        try:
+            df = pd.read_csv(arquivo)
+            if not df.empty and 'Data' in df.columns:
+                df['Data'] = pd.to_datetime(df['Data']).dt.date
+            return df.reindex(columns=colunas)
+        except: return pd.DataFrame(columns=colunas)
+    return pd.DataFrame(columns=colunas)
+
+def salvar_dados(df, arquivo):
+    df.to_csv(arquivo, index=False)
+
+# Definição das colunas oficiais
+cols_trans = ['Data', 'Tipo', 'Categoria', 'Descricao', 'Valor']
+cols_inv = ['Data', 'Tipo_Ativo', 'Descricao', 'Valor_Aplicado', 'Taxa_Anual', 'Meta_Destino']
+cols_metas = ['Nome_Meta', 'Valor_Objetivo']
+
+# Inicialização
+df_transacoes = carregar_dados('banco_cc.csv', cols_trans)
+df_invest = carregar_dados('investimentos.csv', cols_inv)
+df_metas = carregar_dados('metas.csv', cols_metas)
+
+if 'saldo_para_aportar' not in st.session_state:
+    st.session_state.saldo_para_aportar = 0.0
+
+# 2. LÓGICA DE RENDIMENTO
+def calcular_valor_atual(row):
+    try:
+        data_inv = row['Data']
+        if isinstance(data_inv, str):
+            data_inv = datetime.strptime(data_inv, '%Y-%m-%d').date()
+        dias = (date.today() - data_inv).days
+        if dias <= 0: return row['Valor_Aplicado']
+        taxa_diaria = (1 + (row['Taxa_Anual']/100))**(1/365) - 1
+        return row['Valor_Aplicado'] * (1 + taxa_diaria)**dias
+    except: return row['Valor_Aplicado']
+
+# 3. SIDEBAR (CADASTRO)
+with st.sidebar:
+    st.header("📲 Novo Lançamento")
+    tipo = st.selectbox("Operação", ["Receita", "Gasto"])
+    cat = st.selectbox("Categoria", ["Trabalho", "Fixo", "Variável", "Lazer", "Saúde"])
+    desc = st.text_input("Descrição")
+    valor = st.number_input("Valor R$", min_value=0.0)
+    data_in = st.date_input("Data")
+    
+    perc_inv = 0
+    if tipo == "Receita":
+        perc_inv = st.slider("Investir (%)", 0, 100, 10)
+    
+    if st.button("🚀 GRAVAR"):
+        nova_trans = pd.DataFrame([[data_in, tipo, cat, desc, valor]], columns=cols_trans)
+        df_transacoes = pd.concat([df_transacoes, nova_trans], ignore_index=True)
+        if tipo == "Receita" and perc_inv > 0:
+            st.session_state.saldo_para_aportar += (valor * perc_inv) / 100
+        salvar_dados(df_transacoes, 'banco_cc.csv')
+        st.success("Salvo!")
+        st.rerun()
+
+# 4. PROCESSAMENTO DE VALORES
+if not df_invest.empty:
+    df_invest['Valor_Atualizado'] = df_invest.apply(calcular_valor_atual, axis=1)
+    total_inv = df_invest['Valor_Atualizado'].sum()
+else: total_inv = 0
+
+rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
+gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
+saldo_cc = rec - gas
+
+# 5. LAYOUT DE ABAS
+st.title("💎 Minhas Finanças")
+c1, c2 = st.columns(2)
+c1.metric("Banco CC", f"R$ {saldo_cc:,.2f}")
+c2.metric("Investido", f"R$ {total_inv:,.2f}")
+
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Dash", "📈 Ativos", "🎯 Metas", "📅 Evolução Anual"])
+
+with tab1:
+    if not df_transacoes.empty:
+        df_gasto = df_transacoes[df_transacoes['Tipo']=='Gasto']
+        if not df_gasto.empty:
+            fig = px.pie(df_gasto, values='Valor', names='Categoria', hole=0.4, title="Meus Gastos")
+            st.plotly_chart(fig, use_container_width=True)
+        else: st.info("Grave um 'Gasto' para ver o gráfico.")
+    else: st.info("Sem movimentações no banco.")
+
+with tab2:
+    st.subheader("💰 Carteira de Investimentos")
+    if st.session_state.saldo_para_aportar > 0:
+        st.warning(f"Disponível: R$ {st.session_state.saldo_para_aportar:,.2f}")
+        col_a, col_b = st.columns(2)
+        t_at = col_a.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
+        tx_at = col_b.number_input("Taxa Anual %", value=12.0)
+        nm_at = st.text_input("Nome do Papel")
+        m_dest = st.selectbox("Destinar p/ Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
+        
+        if st.button("Confirmar Investimento"):
+            novo = pd.DataFrame([[date.today(), t_at, nm_at, st.session_state.saldo_para_aportar, tx_at, m_dest]], columns=cols_inv)
+            df_invest = pd.concat([df_invest, novo], ignore_index=True)
+            salvar_dados(df_invest, 'investimentos.csv')
+            st.session_state.saldo_para_aportar = 0
+            st.rerun()
+    
+    st.divider()
+    if not df_invest.empty:
+        for i, row in df_invest.iterrows():
+            with st.expander(f"{row['Tipo_Ativo']} - R$ {row['Valor_Atualizado']:,.2f}"):
+                st.write(f"Meta: {row['Meta_Destino']}")
+                if st.button(f"🔍 Pesquisar", key=f"p_{i}"):
+                    webbrowser.open_new_tab(f"https://www.google.com/search?q=rentabilidade+{row['Tipo_Ativo']}")
+
+with tab3:
+    st.subheader("🚩 Minhas Metas")
+    with st.expander("➕ Criar Nova Meta"):
+        n_meta = st.text_input("Nome (Ex: Viagem)")
+        v_meta = st.number_input("Valor Objetivo R$", min_value=1.0)
+        if st.button("Salvar Meta"):
+            if n_meta:
+                nova_m = pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)
+                df_metas = pd.concat([df_metas, nova_m], ignore_index=True)
+                salvar_dados(df_metas, 'metas.csv')
+                st.success("Meta criada!")
+                st.rerun()
+
+    st.divider()
+    if not df_metas.empty:
+        for i, m in df_metas.iterrows():
+            acumulado = 0
+            if not df_invest.empty:
+                acumulado = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum()
+            progresso = min(acumulado / m['Valor_Objetivo'], 1.0)
+            st.write(f"**{m['Nome_Meta']}**")
+            st.progress(progresso)
+            st.write(f"R$ {acumulado:,.2f} de R$ {m['Valor_Objetivo']:,.2f} ({progresso*100:.1f}%)")
+
+with tab4:
+    st.subheader("📊 Balanço Anual Detalhado")
+    
+    if not df_transacoes.empty:
+        # Preparação dos dados para o gráfico mensal
+        df_transacoes['Data'] = pd.to_datetime(df_transacoes['Data'])
+        df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
+        
+        # Agrupar Receitas e Gastos por mês
+        df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
+        
+        # Adicionar Investimentos no gráfico (calculado a partir dos aportes)
+        if not df_invest.empty:
+            df_inv_copy = df_invest.copy()
+            df_inv_copy['Data'] = pd.to_datetime(df_inv_copy['Data'])
+            df_inv_copy['Mes'] = df_inv_copy['Data'].dt.strftime('%b/%Y')
+            df_inv_mensal = df_inv_copy.groupby('Mes')['Valor_Aplicado'].sum().reset_index()
+            df_inv_mensal['Tipo'] = 'Investimento'
+            df_inv_mensal.rename(columns={'Valor_Aplicado': 'Valor'}, inplace=True)
+            df_mensal = pd.concat([df_mensal, df_inv_mensal], ignore_index=True)
+
+        # Gráfico de Colunas Agrupadas
+        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group',
+                          title="Comparativo Mensal: Receitas x Gastos x Investimentos",
+                          color_discrete_map={'Receita':'#00CC96', 'Gasto':'#EF553B', 'Investimento':'#636EFA'})
+        st.plotly_chart(fig_anual, use_container_width=True)
+
+        # Placar Anual
+        st.divider()
+        st.write("### 🏆 Resumo Acumulado do Ano")
+        ca1, ca2, ca3, ca4 = st.columns(4)
+        total_ano_rec = df_transacoes[df_transacoes['Tipo']=='Receita']['Valor'].sum()
+        total_ano_gas = df_transacoes[df_transacoes['Tipo']=='Gasto']['Valor'].sum()
+        total_ano_inv = df_invest['Valor_Aplicado'].sum() if not df_invest.empty else 0
+        
+        ca1.metric("Faturamento Anual", f"R$ {total_ano_rec:,.2f}")
+        ca2.metric("Despesas Anuais", f"R$ {total_ano_gas:,.2f}")
+        ca3.metric("Aportes no Ano", f"R$ {total_ano_inv:,.2f}")
+        ca4.metric("Lucro Líquido", f"R$ {(total_ano_rec - total_ano_gas):,.2f}")
+    else:
+        st.info("Registre transações para visualizar a evolução anual.")
