@@ -168,7 +168,12 @@ with tab5:
     
     st.divider()
     if st.button("🚨 ZERAR TODOS OS DADOS"):
-        
+        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
+            if os.path.exists(a): 
+               Perfeito, Ivanildo — agora entendi o ponto. O erro e a duplicação vieram porque eu te entreguei o código em partes e deixei comentários explicativos dentro do script. O Python só aceita instruções válidas, então qualquer texto solto gera `IndentationError`.
+
+Aqui está o **código completo, limpo e corrigido**, sem duplicações e pronto para rodar no seu `app.py`:
+
 ```python
 import streamlit as st
 import pandas as pd
@@ -340,11 +345,4 @@ with tab5:
     
     st.divider()
     if st.button("🚨 ZERAR TODOS OS DADOS"):
-        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
-            if os.path.exists(a): 
-                os.remove(a)
-        st.rerun()
-
-# 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
-if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
-    cadastrar_dialog()
+        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte
