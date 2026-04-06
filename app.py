@@ -8,21 +8,36 @@ from datetime import date, datetime
 # 1. CONFIGURAÇÕES DE LAYOUT
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
+# Alternar tema
+modo_escuro = st.toggle("🌙 Modo Escuro")
+
+if modo_escuro:
+    COR_FUNDO = "#1c1c1c"
+    COR_TEXTO = "#f1f1f1"
+    GRADIENTE = "linear-gradient(135deg, #1c1c1c 0%, #2d2d2d 100%)"
+else:
+    COR_FUNDO = "#f8f9fa"
+    COR_TEXTO = "#2c3e50"
+    GRADIENTE = "linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%)"
+    
 # Cores Corporativas
 COR_PRIMARIA = '#2d6a4f'
 COR_FUNDO = '#f8f9fa'
 COR_TEXTO = '#2c3e50'
 
 # Estilos customizados
+
+# CSS dinâmico
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
     html, body, [class*="css"] {{
         font-family: 'Montserrat', sans-serif;
+        color: {COR_TEXTO};
     }}
 
     .stApp {{
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%);
+        background: {GRADIENTE};
     }}
 
     h1 {{
@@ -34,7 +49,8 @@ st.markdown(f"""
     }}
 
     .card {{
-        background-color: white;
+        background-color: {CARD_BG};
+        color: {CARD_TEXT};
         padding: 20px;
         border-radius: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
@@ -48,7 +64,8 @@ st.markdown(f"""
         margin-bottom: 20px;
     }}
     .stTabs [data-baseweb="tab"] {{
-        background-color: white;
+        background-color: {CARD_BG};
+        color: {CARD_TEXT};
         border-radius: 15px;
         padding: 15px;
         box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
@@ -59,7 +76,8 @@ st.markdown(f"""
         transition: all 0.3s ease;
     }}
     .stTabs [data-baseweb="tab"]:hover {{
-        background-color: #d8f3dc;
+        background-color: #40916c;
+        color: white;
         transform: scale(1.05);
     }}
     .stTabs [aria-selected="true"] {{
