@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import date, datetime
+from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
 # 1. CONFIGURAÇÕES DE LAYOUT E CONEXÃO
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
-# SUBSTITUA PELO SEU LINK DO GOOGLE SHEETS
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit#gid=0"
+# LINK DA SUA PLANILHA JÁ CONFIGURADO
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1epf2H2ZjrmmXrS2OV-8W3P7LC7dp2FKJTHumWNevVeo/edit#gid=0"
 
 # Criar a conexão com o Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -42,6 +42,7 @@ st.markdown(f"""
       -webkit-text-fill-color: transparent;
       font-weight: 900;
       text-align: center;
+      margin-bottom: 20px;
     }}
     .card {{
         background-color: {CARD_BG};
@@ -50,9 +51,8 @@ st.markdown(f"""
         border-radius: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
         text-align: center;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }}
-    /* Estilo das Abas */
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
         grid-template-columns: repeat(5, 1fr);
@@ -70,22 +70,16 @@ st.markdown(f"""
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
     }}
-    /* Botão Gravar Dados Fixo */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="btn_gravar"]) {{
-        position: fixed;
-        bottom: 20px;
-        left: 5%;
-        right: 5%;
-        z-index: 999;
-    }}
+    /* Botão Gravar Dados Flutuante */
     .stButton>button[key="btn_gravar"] {{
-        width: 90vw !important;
+        width: 100% !important;
         height: 55px !important;
         border-radius: 15px !important;
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
         font-weight: 900 !important;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.3) !important;
+        margin-top: 20px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -93,6 +87,7 @@ st.markdown(f"""
 # 2. FUNÇÕES DE DADOS (GOOGLE SHEETS)
 def carregar_dados(aba, colunas):
     try:
+        # ttl="0" força o app a ler o dado mais recente sem cache
         df = conn.read(spreadsheet=URL_PLANILHA, worksheet=aba, ttl="0")
         if df is None or df.empty:
             return pd.DataFrame(columns=colunas)
@@ -115,7 +110,7 @@ df_transacoes = carregar_dados('vendas', cols_trans)
 df_invest = carregar_dados('investimentos', cols_inv)
 df_metas = carregar_dados('metas', cols_metas)
 
-# Saldo para aporte (Simulado via session_state para esta sessão)
+# Saldo para aporte (Temporário na sessão)
 if 'saldo_para_aportar' not in st.session_state:
     st.session_state.saldo_para_aportar = 0.0
 
@@ -139,12 +134,10 @@ def cadastrar_dialog():
             
             if tipo == "Receita" and perc_inv > 0:
                 v_inv = (valor_in * perc_inv) / 100
-                ajuste = pd.DataFrame([[data_in, "Gasto", "Investimento", f"Reserva: {desc}", v_inv]], columns=cols_trans)
-                df_atualizado = pd.concat([df_atualizado, ajuste], ignore_index=True)
                 st.session_state.saldo_para_aportar += v_inv
             
             salvar_dados(df_atualizado, 'vendas')
-            st.success("**DADOS GRAVADOS NO GOOGLE SHEETS!**")
+            st.success("**GRAVADO NA PLANILHA!**")
             st.rerun()
 
 # 4. PROCESSAMENTO
@@ -164,13 +157,13 @@ gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
 # 5. EXIBIÇÃO PRINCIPAL
-st.markdown("<h1>💼 PLANEJAMENTO FINANCEIRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1>💼 FINANCEIRO</h1>", unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown(f"<div class='card'><h4>💰 Disponível</h4><h2>R$ {saldo_cc:,.2f}</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='card'><h5>💰 Conta</h5><h2>R$ {saldo_cc:,.2f}</h2></div>", unsafe_allow_html=True)
 with col2:
-    st.markdown(f"<div class='card'><h4>📈 Investido</h4><h2>R$ {total_inv:,.2f}</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='card'><h5>📈 Investido</h5><h2>R$ {total_inv:,.2f}</h2></div>", unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 DASH", "📈 CARTEIRA", "🎯 METAS", "📅 ANUAL", "⚙️ AJUSTES"])
 
@@ -182,38 +175,36 @@ with tab1:
             fig = px.pie(df_g, values='Valor', names='Categoria', hole=0.5, color_discrete_sequence=['#2d6a4f', '#40916c', '#74c69d', '#95d5b2'])
             fig.update_layout(template=PLOT_THEME, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig, use_container_width=True)
-    else: st.info("**NENHUM DADO REGISTRADO AINDA.**")
+    else: st.info("**SEM DADOS.**")
 
 with tab2:
-    st.subheader("🏦 Carteira de Ativos")
+    st.subheader("🏦 Carteira")
     if st.session_state.saldo_para_aportar > 0:
-        st.warning(f"💰 Saldo para Aplicar: **R$ {st.session_state.saldo_para_aportar:,.2f}**")
+        st.warning(f"💰 Reservado: **R$ {st.session_state.saldo_para_aportar:,.2f}**")
         col_a, col_b = st.columns(2)
         t_at = col_a.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
         tx_at = col_b.number_input("Taxa Anual %", value=12.0)
-        nm_at = st.text_input("Nome do Papel")
+        nm_at = st.text_input("Papel")
         m_dest = st.selectbox("Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
         
-        if st.button("Confirmar Aplicação"):
+        if st.button("Aplicar"):
             novo = pd.DataFrame([[date.today(), t_at, nm_at, st.session_state.saldo_para_aportar, tx_at, m_dest]], columns=cols_inv)
             df_inv_novo = pd.concat([df_invest, novo], ignore_index=True)
             salvar_dados(df_inv_novo, 'investimentos')
             st.session_state.saldo_para_aportar = 0.0
             st.rerun()
-    
     st.dataframe(df_invest, use_container_width=True)
 
 with tab3:
-    st.subheader("🚩 Objetivos")
-    with st.expander("➕ Nova Meta"):
-        n_meta = st.text_input("Nome da Meta")
-        v_meta = st.number_input("Valor Alvo", min_value=1.0)
-        if st.button("Criar Meta"):
+    st.subheader("🚩 Metas")
+    with st.expander("➕ Nova"):
+        n_meta = st.text_input("Nome")
+        v_meta = st.number_input("Alvo", min_value=1.0)
+        if st.button("Criar"):
             nova_m = pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)
             df_metas_novo = pd.concat([df_metas, nova_m], ignore_index=True)
             salvar_dados(df_metas_novo, 'metas')
             st.rerun()
-
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
             acum = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
@@ -225,15 +216,14 @@ with tab4:
         df_transacoes['Data'] = pd.to_datetime(df_transacoes['Data'])
         df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
         df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
-        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', color_discrete_map={'Receita':COR_PRIMARIA, 'Gasto':'#adb5bd'})
+        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group')
         fig_anual.update_layout(template=PLOT_THEME, paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_anual, use_container_width=True)
 
 with tab5:
-    st.subheader("⚙️ Ajustes Planilha")
-    st.write("Edite os dados diretamente abaixo:")
+    st.subheader("⚙️ Editor da Planilha")
     df_edit = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-    if st.button("Salvar Alterações na Planilha"):
+    if st.button("Salvar Alterações"):
         salvar_dados(df_edit, 'vendas')
         st.rerun()
 
