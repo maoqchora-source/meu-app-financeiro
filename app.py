@@ -148,21 +148,65 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
     else: st.info("Sem dados de gastos.")
 
+# --- TRECHO DA TAB 2 (CARTEIRA) ---
 with tab2:
-    st.subheader("🏦 Carteira")
-    if saldo_reservado > 0:
-        st.warning(f"💰 Reservado para Aplicar: **R$ {saldo_reservado:,.2f}**")
-        with st.expander("Confirmar Aplicação"):
-            t_at = st.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
-            nm_at = st.text_input("Papel")
-            tx_at = st.number_input("Taxa Anual %", value=12.0)
-            m_dest = st.selectbox("Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
-            if st.button("Gravar Investimento"):
-                novo = pd.DataFrame([[str(date.today()), t_at, nm_at, saldo_reservado, tx_at, m_dest]], columns=cols_inv)
-                salvar_dados(pd.concat([df_invest, novo], ignore_index=True), 'investimentos')
-                salvar_saldo_nuvem(0.0) # ZERA O SALDO NA PLANILHA
-                st.rerun()
+    reserva_para_aplicar = obter_reserva()
+    if reserva_para_aplicar > 0:
+        st.warning(f"🏦 Você tem **R$ {reserva_para_aplicar:,.2f}** aguardando alocação.")
+        if st.button("✅ Confirmar Aporte (Tirar da Reserva e Investir)"):
+            # 1. Registra na aba de Investimentos (onde rende juros)
+            novo_inv = pd.DataFrame([[
+                str(date.today()), "Aporte", "Investimento Realizado", reserva_para_aplicar, 12, "Geral"
+            ]], columns=['Data', 'Tipo_Ativo', 'Descricao', 'Valor_Aplicado', 'Taxa_Anual', 'Meta_Destino'])
+            
+            # 2. Salva o investimento
+            salvar_dados(pd.concat([df_invest, novo_inv]), 'investimentos')
+            
+            # 3. ZERA a reserva na aba 'config' para o aviso sumir
+            conn.update(spreadsheet=URL_PLANILHA, worksheet='config', data=pd.DataFrame([[0.0]], columns=['saldo_aporte']))
+            
+            st.success("Investimento realizado com sucesso!")
+            st.rerun()
+    else:
+        st.info("Não há saldo reservado para novos aportes.")
+    
+    st.subheader("Minha Carteira Atual")
     st.dataframe(df_invest, use_container_width=True)
+
+# --- LÓGICA DE LANÇAMENTO (Ajustada para não duplicar) ---
+@st.dialog("NOVO LANÇAMENTO")
+def lancar():
+    tipo = st.selectbox("Tipo", ["Receita", "Gasto"])
+    cat = st.selectbox("Categoria", ["Salário", "Fixo", "Lazer", "Saúde", "Aporte/Investimento"])
+    valor = st.number_input("Valor R$", min_value=0.0)
+    
+    perc = 0
+    if tipo == "Receita":
+        perc = st.slider("Quanto desse valor vai para investimento (%)?", 0, 100, 0)
+
+    if st.button("SALVAR"):
+        if valor > 0:
+            novos_registros = []
+            
+            # 1. Registra a Receita bruta
+            novos_registros.append([str(date.today()), tipo, cat, "Lançamento", valor])
+            
+            # 2. SE FOR RECEITA COM PORCENTAGEM DE INVESTIMENTO:
+            if tipo == "Receita" and perc > 0:
+                valor_inv = (valor * perc / 100)
+                
+                # Criamos uma "Saída" automática chamada 'Investimento' 
+                # Isso garante que o saldo da CC fique sempre com o valor líquido (80%)
+                novos_registros.append([str(date.today()), "Gasto", "Aporte/Investimento", "Reserva Automática", valor_inv])
+                
+                # Atualiza a aba 'config' para o aviso aparecer na Tab 2
+                reserva_atual_na_planilha = obter_reserva()
+                conn.update(spreadsheet=URL_PLANILHA, worksheet='config', data=pd.DataFrame([[reserva_atual_na_planilha + valor_inv]], columns=['saldo_aporte']))
+
+            # Salva tudo na aba 'vendas'
+            df_novos = pd.DataFrame(novos_registros, columns=['Data', 'Tipo', 'Categoria', 'Descricao', 'Valor'])
+            salvar_dados(pd.concat([df_transacoes, df_novos]), 'vendas')
+            st.rerun()
 
 with tab3:
     st.subheader("🚩 Metas")
