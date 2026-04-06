@@ -159,11 +159,16 @@ gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
 saldo_cc = rec - gas
 
 # 5. EXIBIÇÃO PRINCIPAL
-st.markdown("<h1 style='text-align: center;'>💼 **PLANEJAMENTO FINANCEIRO**</h1>", unsafe_allow_html=True)
-st.metric("**DISPONÍVEL EM CONTA**", f"R$ {saldo_cc:,.2f}")
-st.metric("**PATRIMÔNIO INVESTIDO**", f"R$ {total_inv:,.2f}")
+st.markdown("<h1>💼 PLANEJAMENTO FINANCEIRO</h1>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown(f"<div class='card'><h3>💰 Disponível em Conta</h3><h2>R$ {saldo_cc:,.2f}</h2></div>", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"<div class='card'><h3>📈 Patrimônio Investido</h3><h2>R$ {total_inv:,.2f}</h2></div>", unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["**📊 DASH**", "**📈 CARTEIRA**", "**🎯 METAS**", "**📅 ANUAL**", "**⚙️ AJUSTES**"])
+
 
 with tab1:
     st.markdown("### **DISTRIBUIÇÃO DE GASTOS**")
