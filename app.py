@@ -5,7 +5,13 @@ import os
 from datetime import date, datetime
 
 # 1. CONFIGURAÇÕES DE LAYOUT
+
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
+
+# Cores Corporativas
+COR_PRIMARIA = '#2d6a4f'
+COR_FUNDO = '#f8f9fa'
+COR_TEXTO = '#2c3e50'
 
 # Alternar tema
 modo_escuro = st.toggle("🌙 Modo Escuro")
