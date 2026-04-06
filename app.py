@@ -13,6 +13,9 @@ st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_
 # Alternar tema
 modo_escuro = st.toggle("🌙 Modo Escuro")
 
+# Definição das cores
+COR_PRIMARIA = "#2d6a4f"  # precisa estar definido antes do CSS
+
 if modo_escuro:
     COR_FUNDO = "#1c1c1c"
     COR_TEXTO = "#f1f1f1"
@@ -29,24 +32,16 @@ else:
 # CSS dinâmico
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
-    html, body, [class*="css"] {{
-        font-family: 'Montserrat', sans-serif;
-        color: {COR_TEXTO};
-    }}
-
     .stApp {{
         background: {GRADIENTE};
     }}
-
     h1 {{
-      background: linear-gradient(90deg, #2d6a4f, #40916c);
+      background: linear-gradient(90deg, {COR_PRIMARIA}, #40916c);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       font-weight: 900;
       text-align: center;
     }}
-
     .card {{
         background-color: {CARD_BG};
         color: {CARD_TEXT};
@@ -55,7 +50,6 @@ st.markdown(f"""
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
         text-align: center;
     }}
-
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
         grid-template-columns: repeat(5, 1fr);
