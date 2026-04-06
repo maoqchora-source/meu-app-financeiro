@@ -209,12 +209,6 @@ with tab3:
             st.toast("✅ Metas salvas!")
             st.rerun()
 
-    st.divider()
-    if st.button("🚨 ZERAR TODOS OS DADOS"):
-        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
-            if os.path.exists(a):
-                os.remove(a)
-        st.rerun()
 
 with tab5:
     st.subheader("**ADMINISTRAÇÃO DO APP**")
@@ -226,7 +220,12 @@ with tab5:
             salvar_dados(df_e, 'banco_cc.csv')
             st.toast("✅ Transações salvas!")
             st.rerun()
-
+    st.divider()
+    if st.button("🚨 ZERAR TODOS OS DADOS"):
+        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
+            if os.path.exists(a):
+                os.remove(a)
+        st.rerun()
 
     # 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
 if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
