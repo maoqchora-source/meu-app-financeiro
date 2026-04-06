@@ -105,12 +105,29 @@ df_invest = carregar_dados('investimentos', cols_inv)
 df_metas = carregar_dados('metas', cols_metas)
 saldo_reservado = obter_saldo_nuvem()
 
-# 3. CÁLCULOS (FIXO: DESCONTANDO RESERVA DO SALDO)
-total_rec = df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum()
-total_gas = df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum()
-saldo_cc = total_rec - total_gas - saldo_reservado # Abate a reserva aqui
-total_inv = df_invest['Valor_Aplicado'].sum() if not df_invest.empty else 0.0
-
+# 3. CÁLCULOS (BLINDADOS CONTRA ERROS DE TIPO)
+try:
+    # Garante que os valores são numéricos, substituindo erros por 0
+    df_transacoes['Valor'] = pd.to_numeric(df_transacoes['Valor'], errors='coerce').fillna(0)
+    
+    total_rec = float(df_transacoes[df_transacoes['Tipo'] == 'Receita']['Valor'].sum())
+    total_gas = float(df_transacoes[df_transacoes['Tipo'] == 'Gasto']['Valor'].sum())
+    
+    # Garante que o saldo reservado é um número único (float)
+    val_reserva = float(saldo_reservado) if isinstance(saldo_reservado, (int, float)) else 0.0
+    
+    # CÁLCULO REAL: Entradas - Saídas - O que foi guardado para investir
+    saldo_cc = total_rec - total_gas - val_reserva
+    
+    if not df_invest.empty:
+        df_invest['Valor_Aplicado'] = pd.to_numeric(df_invest['Valor_Aplicado'], errors='coerce').fillna(0)
+        total_inv = float(df_invest['Valor_Aplicado'].sum())
+    else:
+        total_inv = 0.0
+except Exception as e:
+    st.error(f"Erro no cálculo: {e}")
+    saldo_cc = 0.0
+    total_inv = 0.0
 # 4. EXIBIÇÃO PRINCIPAL
 st.markdown("<h1>💼 FINANCEIRO</h1>", unsafe_allow_html=True)
 
