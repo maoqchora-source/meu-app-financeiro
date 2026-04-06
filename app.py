@@ -7,72 +7,76 @@ from datetime import date, datetime
 # 1. CONFIGURAÇÕES DE LAYOUT
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
-# Cores Corporativas
-COR_PRIMARIA = '#2d6a4f'
-COR_FUNDO = '#f8f9fa'
-COR_TEXTO = '#2c3e50'
+# Alternar tema
+modo_escuro = st.toggle("🌙 Modo Escuro")
 
+# Definição das cores
+COR_PRIMARIA = "#2d6a4f"  # precisa estar definido antes do CSS
+
+if modo_escuro:
+    COR_FUNDO = "#1c1c1c"
+    COR_TEXTO = "#f1f1f1"
+    GRADIENTE = "linear-gradient(135deg, #1c1c1c 0%, #2d2d2d 100%)"
+    CARD_BG = "#2c2c2c"
+    CARD_TEXT = "#f1f1f1"
+else:
+    COR_FUNDO = "#f8f9fa"
+    COR_TEXTO = "#2c3e50"
+    GRADIENTE = "linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%)"
+    CARD_BG = "white"
+    CARD_TEXT = "#2c3e50"
+
+# CSS dinâmico
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {COR_FUNDO}; }}
-    
-    /* Negrito nas métricas e títulos */
-    [data-testid="stMetricValue"] {{ 
-        color: {COR_PRIMARIA}; 
-        font-size: 2.5rem !important; 
-        text-align: center; 
-        font-weight: 800 !important; 
+    .stApp {{
+        background: {GRADIENTE};
     }}
-    [data-testid="stMetricLabel"] {{ 
-        text-align: center; 
-        font-weight: bold !important; 
-        color: {COR_TEXTO}; 
-        font-size: 1.1rem !important;
+    h1 {{
+      background: linear-gradient(90deg, {COR_PRIMARIA}, #40916c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 900;
+      text-align: center;
     }}
-    
-    /* Grid de Abas Arredondadas com Negrito */
+    .card {{
+        background-color: {CARD_BG};
+        color: {CARD_TEXT};
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+    }}
     .stTabs [data-baseweb="tab-list"] {{
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 10px;
         margin-bottom: 20px;
     }}
     .stTabs [data-baseweb="tab"] {{
-        background-color: white;
+        background-color: {CARD_BG};
+        color: {CARD_TEXT};
         border-radius: 15px;
         padding: 15px;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
         border: 1px solid #eee;
-        height: 80px;
+        height: 70px;
         font-weight: bold !important;
+        text-align: center;
+        transition: all 0.3s ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: #40916c;
+        color: white;
+        transform: scale(1.05);
     }}
     .stTabs [aria-selected="true"] {{
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
-    }}
-
-    /* Botão GRAVAR DADOS Estilizado */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="btn_gravar"]) {{
-        position: fixed;
-        bottom: 20px;
-        left: 5%;
-        right: 5%;
-        z-index: 999;
-    }}
-    .stButton>button[key="btn_gravar"] {{
-        width: 90vw !important;
-        height: 60px !important;
-        border-radius: 15px !important;
-        background-color: {COR_PRIMARIA} !important;
-        color: white !important;
-        font-size: 20px !important;
-        font-weight: 900 !important;
-        box-shadow: 0px 6px 20px rgba(0,0,0,0.3) !important;
-        border: none !important;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.2);
     }}
     </style>
-    """, unsafe_allow_html=True)
-
+""", unsafe_allow_html=True)
 # 2. FUNÇÕES DE DADOS
 def carregar_dados(arquivo, colunas):
     if os.path.exists(arquivo):
