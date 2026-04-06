@@ -186,14 +186,33 @@ with tab2:
         st.dataframe(df_invest[['Tipo_Ativo', 'Descricao', 'Valor_Atualizado', 'Meta_Destino']], use_container_width=True)
 
 with tab3:
-    st.subheader("**PROGRESSO DAS METAS**")
+    st.subheader("🚩 Objetivos")
+    with st.expander("➕ Nova Meta"):
+        n_meta = st.text_input("Nome da Meta")
+        v_meta = st.number_input("Valor Alvo", min_value=1.0)
+        if st.button("Criar Meta"):
+            if n_meta:
+                nova_m = pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)
+                df_metas = pd.concat([df_metas, nova_m], ignore_index=True)
+                salvar_dados(df_metas, 'metas.csv')
+                st.rerun()
+
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
-            acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
-            st.write(f"**{m['Nome_Meta'].upper()}**")
-            st.progress(min(acum/m['Valor_Objetivo'], 1.0))
-            st.caption(f"**R$ {acum:,.2f} DE R$ {m['Valor_Objetivo']:,.2f}**")
+            acumulado = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
+            progresso = min(acumulado / m['Valor_Objetivo'], 1.0)
+            st.write(f"**{m['Nome_Meta']}**")
+            st.progress(progresso)
+            st.caption(f"R$ {acumulado:,.2f} de R$ {m['Valor_Objetivo']:,.2f}")
 
+with tab4:
+    if not df_transacoes.empty:
+        df_transacoes['Data'] = pd.to_datetime(df_transacoes['Data'])
+        df_transacoes['Mes'] = df_transacoes['Data'].dt.strftime('%b/%Y')
+        df_mensal = df_transacoes.groupby(['Mes', 'Tipo'])['Valor'].sum().reset_index()
+        fig_anual = px.bar(df_mensal, x='Mes', y='Valor', color='Tipo', barmode='group', 
+                          color_discrete_map={'Receita':COR_PRIMARIA, 'Gasto':'#adb5bd'})
+        st.plotly_chart(fig_anual, use_container_width=True)
 with tab5:
     st.subheader("**ADMINISTRAÇÃO DO APP**")
     with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
