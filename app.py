@@ -221,12 +221,48 @@ with tab4:
         st.plotly_chart(fig_anual, use_container_width=True)
 
 with tab5:
-    st.subheader("⚙️ Editor da Planilha")
-    df_edit = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-    if st.button("Salvar Alterações"):
-        salvar_dados(df_edit, 'vendas')
-        st.rerun()
+    st.subheader("⚙️ Central de Controle")
+    
+    # --- EDIÇÃO DE TRANSAÇÕES ---
+    with st.expander("📝 Editar Transações (vendas)"):
+        df_edit_vendas = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True, key="ed_vendas")
+        if st.button("Salvar Transações", key="save_v"):
+            salvar_dados(df_edit_vendas, 'vendas')
+            st.success("Transações atualizadas!")
+            st.rerun()
 
-# 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
-if st.button("GRAVAR DADOS", key="btn_gravar"):
-    cadastrar_dialog()
+    # --- EDIÇÃO DE INVESTIMENTOS ---
+    with st.expander("📈 Editar Carteira (investimentos)"):
+        df_edit_inv = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True, key="ed_inv")
+        if st.button("Salvar Carteira", key="save_i"):
+            salvar_dados(df_edit_inv, 'investimentos')
+            st.success("Investimentos atualizados!")
+            st.rerun()
+
+    # --- EDIÇÃO DE METAS ---
+    with st.expander("🎯 Editar Metas"):
+        df_edit_metas = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True, key="ed_metas")
+        if st.button("Salvar Metas", key="save_m"):
+            salvar_dados(df_edit_metas, 'metas')
+            st.success("Metas atualizadas!")
+            st.rerun()
+
+    st.divider()
+    
+    # --- BOTÃO PARA LIMPAR TUDO ---
+    st.warning("🚨 **ZONA DE PERIGO**")
+    confirmar_limpeza = st.checkbox("Eu entendo que isso apagará todos os dados da Planilha Google.")
+    
+    if st.button("LIMPAR PLANILHA COMPLETA", type="primary", disabled=not confirmar_limpeza):
+        # Cria DataFrames vazios apenas com os cabeçalhos
+        df_vazio_vendas = pd.DataFrame(columns=cols_trans)
+        df_vazio_inv = pd.DataFrame(columns=cols_inv)
+        df_vazio_metas = pd.DataFrame(columns=cols_metas)
+        
+        # Salva os vazios por cima das abas atuais
+        salvar_dados(df_vazio_vendas, 'vendas')
+        salvar_dados(df_vazio_inv, 'investimentos')
+        salvar_dados(df_vazio_metas, 'metas')
+        
+        st.success("Todos os dados foram apagados da nuvem!")
+        st.rerun()
