@@ -20,7 +20,10 @@ st.markdown(f"""
     html, body, [class*="css"] {{
         font-family: 'Montserrat', sans-serif;
     }}
-    .stApp {{ background-color: {COR_FUNDO}; }}
+
+    .stApp {{
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%);
+    }}
 
     h1 {{
       background: linear-gradient(90deg, #2d6a4f, #40916c);
@@ -36,6 +39,33 @@ st.markdown(f"""
         border-radius: 15px;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
         text-align: center;
+    }}
+
+    .stTabs [data-baseweb="tab-list"] {{
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        background-color: white;
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        border: 1px solid #eee;
+        height: 70px;
+        font-weight: bold !important;
+        text-align: center;
+        transition: all 0.3s ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: #d8f3dc;
+        transform: scale(1.05);
+    }}
+    .stTabs [aria-selected="true"] {{
+        background-color: {COR_PRIMARIA} !important;
+        color: white !important;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.2);
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -147,33 +177,5 @@ with tab3:
     st.subheader("**PROGRESSO DAS METAS**")
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
-            acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if not df_invest.empty else 0
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=acum,
-                title={'text': m['Nome_Meta']},
-                gauge={'axis': {'range': [None, m['Valor_Objetivo']]},
-                       'bar': {'color': COR_PRIMARIA}}
-            ))
-            st.plotly_chart(fig, use_container_width=True)
-
-with tab5:
-    st.subheader("**ADMINISTRAÇÃO DO APP**")
-    with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
-        df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-        if st.button("💾 SALVAR ALTERAÇÕES"):
-            salvar_dados(df_e, 'banco_cc.csv')
-            st.toast("✅ Alterações salvas!")
-            st.rerun()
-    
-    st.divider()
-    if st.button("🚨 ZERAR TODOS OS DADOS"):
-        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
-            if os.path.exists(a):
-                os.remove(a)
-        st.rerun()
-
-# 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
-if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
-    cadastrar_dialog() 
+            acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if notIvanildo, agora sim: aqui está o **código completo, limpo e sem duplicações**, já com o **fundo em gradiente suave** e as **abas estilizadas como botões arredondados**. Você pode substituir direto no seu `app.py`:
 
