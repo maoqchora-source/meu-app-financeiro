@@ -7,10 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 # 1. CONFIGURAÇÕES DE LAYOUT E CONEXÃO
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
-# LINK DA SUA PLANILHA JÁ CONFIGURADO
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1epf2H2ZjrmmXrS2OV-8W3P7LC7dp2FKJTHumWNevVeo/edit#gid=0"
-
-# Criar a conexão com o Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- CORES E TEMA ---
@@ -18,21 +15,16 @@ modo_escuro = st.toggle("🌙 Modo Escuro")
 COR_PRIMARIA = "#2d6a4f"
 
 if modo_escuro:
-    COR_FUNDO = "#1c1c1c"
-    COR_TEXTO = "#f1f1f1"
     GRADIENTE = "linear-gradient(135deg, #1c1c1c 0%, #2d2d2d 100%)"
     CARD_BG = "#2c2c2c"
     CARD_TEXT = "#f1f1f1"
     PLOT_THEME = "plotly_dark"
 else:
-    COR_FUNDO = "#f8f9fa"
-    COR_TEXTO = "#2c3e50"
     GRADIENTE = "linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%)"
     CARD_BG = "white"
     CARD_TEXT = "#2c3e50"
     PLOT_THEME = "plotly_white"
 
-# CSS DINÂMICO
 st.markdown(f"""
     <style>
     .stApp {{ background: {GRADIENTE}; }}
@@ -64,22 +56,10 @@ st.markdown(f"""
         border-radius: 12px;
         height: 60px;
         font-weight: bold !important;
-        border: 1px solid rgba(0,0,0,0.1);
     }}
     .stTabs [aria-selected="true"] {{
         background-color: {COR_PRIMARIA} !important;
         color: white !important;
-    }}
-    /* Botão Gravar Dados Flutuante */
-    .stButton>button[key="btn_gravar"] {{
-        width: 100% !important;
-        height: 55px !important;
-        border-radius: 15px !important;
-        background-color: {COR_PRIMARIA} !important;
-        color: white !important;
-        font-weight: 900 !important;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.3) !important;
-        margin-top: 20px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -87,7 +67,6 @@ st.markdown(f"""
 # 2. FUNÇÕES DE DADOS (GOOGLE SHEETS)
 def carregar_dados(aba, colunas):
     try:
-        # ttl="0" força o app a ler o dado mais recente sem cache
         df = conn.read(spreadsheet=URL_PLANILHA, worksheet=aba, ttl="0")
         if df is None or df.empty:
             return pd.DataFrame(columns=colunas)
@@ -101,7 +80,19 @@ def salvar_dados(df, aba):
     conn.update(spreadsheet=URL_PLANILHA, worksheet=aba, data=df)
     st.cache_data.clear()
 
-# Inicialização dos DataFrames
+# --- FUNÇÕES PARA O SALDO DE APORTE NA NUVEM ---
+def obter_saldo_nuvem():
+    try:
+        df_conf = conn.read(spreadsheet=URL_PLANILHA, worksheet='config', ttl="0")
+        return float(df_conf.iloc[0, 0])
+    except:
+        return 0.0
+
+def salvar_saldo_nuvem(valor):
+    df_conf = pd.DataFrame([valor], columns=['saldo_aporte'])
+    conn.update(spreadsheet=URL_PLANILHA, worksheet='config', data=df_conf)
+
+# Inicialização
 cols_trans = ['Data', 'Tipo', 'Categoria', 'Descricao', 'Valor']
 cols_inv = ['Data', 'Tipo_Ativo', 'Descricao', 'Valor_Aplicado', 'Taxa_Anual', 'Meta_Destino']
 cols_metas = ['Nome_Meta', 'Valor_Objetivo']
@@ -109,10 +100,6 @@ cols_metas = ['Nome_Meta', 'Valor_Objetivo']
 df_transacoes = carregar_dados('vendas', cols_trans)
 df_invest = carregar_dados('investimentos', cols_inv)
 df_metas = carregar_dados('metas', cols_metas)
-
-# Saldo para aporte (Temporário na sessão)
-if 'saldo_para_aportar' not in st.session_state:
-    st.session_state.saldo_para_aportar = 0.0
 
 # 3. JANELA MODAL (DIALOG)
 @st.dialog("📝 **NOVO LANÇAMENTO**")
@@ -128,15 +115,17 @@ def cadastrar_dialog():
     
     if st.button("**CONFIRMAR E SALVAR**"):
         if valor_in > 0:
-            global df_transacoes
+            # Salvar transação
             nova = pd.DataFrame([[data_in, tipo, cat, desc, valor_in]], columns=cols_trans)
             df_atualizado = pd.concat([df_transacoes, nova], ignore_index=True)
+            salvar_dados(df_atualizado, 'vendas')
             
+            # Lógica de aporte persistente
             if tipo == "Receita" and perc_inv > 0:
                 v_inv = (valor_in * perc_inv) / 100
-                st.session_state.saldo_para_aportar += v_inv
+                novo_saldo = obter_saldo_nuvem() + v_inv
+                salvar_saldo_nuvem(novo_saldo)
             
-            salvar_dados(df_atualizado, 'vendas')
             st.success("**GRAVADO NA PLANILHA!**")
             st.rerun()
 
@@ -179,19 +168,19 @@ with tab1:
 
 with tab2:
     st.subheader("🏦 Carteira")
-    if st.session_state.saldo_para_aportar > 0:
-        st.warning(f"💰 Reservado: **R$ {st.session_state.saldo_para_aportar:,.2f}**")
+    saldo_disponivel = obter_saldo_nuvem()
+    if saldo_disponivel > 0:
+        st.warning(f"💰 Reservado para Aplicar: **R$ {saldo_disponivel:,.2f}**")
         col_a, col_b = st.columns(2)
         t_at = col_a.selectbox("Tipo:", ["CDI", "LCA", "FIIs", "Ações"])
         tx_at = col_b.number_input("Taxa Anual %", value=12.0)
         nm_at = st.text_input("Papel")
         m_dest = st.selectbox("Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
         
-        if st.button("Aplicar"):
-            novo = pd.DataFrame([[date.today(), t_at, nm_at, st.session_state.saldo_para_aportar, tx_at, m_dest]], columns=cols_inv)
-            df_inv_novo = pd.concat([df_invest, novo], ignore_index=True)
-            salvar_dados(df_inv_novo, 'investimentos')
-            st.session_state.saldo_para_aportar = 0.0
+        if st.button("Confirmar Aplicação"):
+            novo_inv = pd.DataFrame([[date.today(), t_at, nm_at, saldo_disponivel, tx_at, m_dest]], columns=cols_inv)
+            salvar_dados(pd.concat([df_invest, novo_inv], ignore_index=True), 'investimentos')
+            salvar_saldo_nuvem(0.0) # Zera após aplicar
             st.rerun()
     st.dataframe(df_invest, use_container_width=True)
 
@@ -201,9 +190,7 @@ with tab3:
         n_meta = st.text_input("Nome")
         v_meta = st.number_input("Alvo", min_value=1.0)
         if st.button("Criar"):
-            nova_m = pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)
-            df_metas_novo = pd.concat([df_metas, nova_m], ignore_index=True)
-            salvar_dados(df_metas_novo, 'metas')
+            salvar_dados(pd.concat([df_metas, pd.DataFrame([[n_meta, v_meta]], columns=cols_metas)], ignore_index=True), 'metas')
             st.rerun()
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
@@ -222,52 +209,29 @@ with tab4:
 
 with tab5:
     st.subheader("⚙️ Central de Controle")
+    with st.expander("📝 Editar Transações"):
+        df_v = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True, key="ed_v")
+        if st.button("Salvar Transações"): salvar_dados(df_v, 'vendas'); st.rerun()
     
-    # --- EDIÇÃO DE TRANSAÇÕES ---
-    with st.expander("📝 Editar Transações (vendas)"):
-        df_edit_vendas = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True, key="ed_vendas")
-        if st.button("Salvar Transações", key="save_v"):
-            salvar_dados(df_edit_vendas, 'vendas')
-            st.success("Transações atualizadas!")
-            st.rerun()
+    with st.expander("📈 Editar Carteira"):
+        df_i = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True, key="ed_i")
+        if st.button("Salvar Carteira"): salvar_dados(df_i, 'investimentos'); st.rerun()
 
-    # --- EDIÇÃO DE INVESTIMENTOS ---
-    with st.expander("📈 Editar Carteira (investimentos)"):
-        df_edit_inv = st.data_editor(df_invest, num_rows="dynamic", use_container_width=True, key="ed_inv")
-        if st.button("Salvar Carteira", key="save_i"):
-            salvar_dados(df_edit_inv, 'investimentos')
-            st.success("Investimentos atualizados!")
-            st.rerun()
-
-    # --- EDIÇÃO DE METAS ---
     with st.expander("🎯 Editar Metas"):
-        df_edit_metas = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True, key="ed_metas")
-        if st.button("Salvar Metas", key="save_m"):
-            salvar_dados(df_edit_metas, 'metas')
-            st.success("Metas atualizadas!")
-            st.rerun()
+        df_m = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True, key="ed_m")
+        if st.button("Salvar Metas"): salvar_dados(df_m, 'metas'); st.rerun()
 
     st.divider()
-    
-    # --- BOTÃO PARA LIMPAR TUDO ---
     st.warning("🚨 **ZONA DE PERIGO**")
-    confirmar_limpeza = st.checkbox("Eu entendo que isso apagará todos os dados da Planilha Google.")
-    
-    if st.button("LIMPAR PLANILHA COMPLETA", type="primary", disabled=not confirmar_limpeza):
-        # Cria DataFrames vazios apenas com os cabeçalhos
-        df_vazio_vendas = pd.DataFrame(columns=cols_trans)
-        df_vazio_inv = pd.DataFrame(columns=cols_inv)
-        df_vazio_metas = pd.DataFrame(columns=cols_metas)
-        
-        # Salva os vazios por cima das abas atuais
-        salvar_dados(df_vazio_vendas, 'vendas')
-        salvar_dados(df_vazio_inv, 'investimentos')
-        salvar_dados(df_vazio_metas, 'metas')
-        
-        st.success("Todos os dados foram apagados da nuvem!")
+    confirmar = st.checkbox("Apagar todos os dados da nuvem.")
+    if st.button("LIMPAR PLANILHA COMPLETA", type="primary", disabled=not confirmar):
+        salvar_dados(pd.DataFrame(columns=cols_trans), 'vendas')
+        salvar_dados(pd.DataFrame(columns=cols_inv), 'investimentos')
+        salvar_dados(pd.DataFrame(columns=cols_metas), 'metas')
+        salvar_saldo_nuvem(0.0)
         st.rerun()
-        
+
 # 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
-# Este bloco deve estar fora de qualquer "with tab" ou "with col"
+st.divider()
 if st.button("📝 LANÇAR NOVA TRANSAÇÃO", key="btn_gravar", use_container_width=True):
     cadastrar_dialog()
