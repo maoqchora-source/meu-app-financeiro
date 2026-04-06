@@ -203,20 +203,31 @@ with tab3:
 
 with tab5:
     st.subheader("**ADMINISTRAÇÃO DO APP**")
+
+    # Editor de transações
     with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
         df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-        if st.button("💾 SALVAR ALTERAÇÕES"):
+        if st.button("💾 SALVAR TRANSAÇÕES"):
             salvar_dados(df_e, 'banco_cc.csv')
-            st.toast("✅ Alterações salvas!")
+            st.toast("✅ Transações salvas!")
             st.rerun()
-    
+
+    # 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
+if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
+    cadastrar_dialog()
+
+
+    # Editor de metas
+    with st.expander("**🎯 EDITAR METAS**"):
+        df_m = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True)
+        if st.button("💾 SALVAR METAS"):
+            salvar_dados(df_m, 'metas.csv')
+            st.toast("✅ Metas salvas!")
+            st.rerun()
+
     st.divider()
     if st.button("🚨 ZERAR TODOS OS DADOS"):
         for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
             if os.path.exists(a):
                 os.remove(a)
         st.rerun()
-
-# 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
-if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
-    cadastrar_dialog()
