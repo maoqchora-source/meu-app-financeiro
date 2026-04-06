@@ -8,6 +8,8 @@ from datetime import date, datetime
 # 1. CONFIGURAÇÕES DE LAYOUT
 st.set_page_config(page_title="Planejamento Financeiro", layout="wide", initial_sidebar_state="collapsed")
 
+# Estilos customizados
+
 # Alternar tema
 modo_escuro = st.toggle("🌙 Modo Escuro")
 
@@ -15,17 +17,14 @@ if modo_escuro:
     COR_FUNDO = "#1c1c1c"
     COR_TEXTO = "#f1f1f1"
     GRADIENTE = "linear-gradient(135deg, #1c1c1c 0%, #2d2d2d 100%)"
+    CARD_BG = "#2c2c2c"
+    CARD_TEXT = "#f1f1f1"
 else:
     COR_FUNDO = "#f8f9fa"
     COR_TEXTO = "#2c3e50"
     GRADIENTE = "linear-gradient(135deg, #f8f9fa 0%, #e9f5ec 100%)"
-    
-# Cores Corporativas
-COR_PRIMARIA = '#2d6a4f'
-COR_FUNDO = '#f8f9fa'
-COR_TEXTO = '#2c3e50'
-
-# Estilos customizados
+    CARD_BG = "white"
+    CARD_TEXT = "#2c3e50"
 
 # CSS dinâmico
 st.markdown(f"""
