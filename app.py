@@ -212,11 +212,6 @@ with tab5:
             st.toast("✅ Transações salvas!")
             st.rerun()
 
-    # 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
-if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
-    cadastrar_dialog()
-
-
     # Editor de metas
     with st.expander("**🎯 EDITAR METAS**"):
         df_m = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True)
@@ -231,3 +226,7 @@ if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
             if os.path.exists(a):
                 os.remove(a)
         st.rerun()
+
+    # 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
+if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
+    cadastrar_dialog()
