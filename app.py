@@ -201,18 +201,7 @@ with tab3:
             ))
             st.plotly_chart(fig, use_container_width=True)
 
-with tab5:
-    st.subheader("**ADMINISTRAÇÃO DO APP**")
-
-    # Editor de transações
-    with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
-        df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
-        if st.button("💾 SALVAR TRANSAÇÕES"):
-            salvar_dados(df_e, 'banco_cc.csv')
-            st.toast("✅ Transações salvas!")
-            st.rerun()
-
-    # Editor de metas
+  # Editor de metas
     with st.expander("**🎯 EDITAR METAS**"):
         df_m = st.data_editor(df_metas, num_rows="dynamic", use_container_width=True)
         if st.button("💾 SALVAR METAS"):
@@ -226,6 +215,18 @@ with tab5:
             if os.path.exists(a):
                 os.remove(a)
         st.rerun()
+
+with tab5:
+    st.subheader("**ADMINISTRAÇÃO DO APP**")
+
+    # Editor de transações
+    with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
+        df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
+        if st.button("💾 SALVAR TRANSAÇÕES"):
+            salvar_dados(df_e, 'banco_cc.csv')
+            st.toast("✅ Transações salvas!")
+            st.rerun()
+
 
     # 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
 if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
