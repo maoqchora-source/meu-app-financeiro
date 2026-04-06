@@ -266,3 +266,8 @@ with tab5:
         
         st.success("Todos os dados foram apagados da nuvem!")
         st.rerun()
+        
+# 6. BOTÃO PRINCIPAL "GRAVAR DADOS"
+# Este bloco deve estar fora de qualquer "with tab" ou "with col"
+if st.button("📝 LANÇAR NOVA TRANSAÇÃO", key="btn_gravar", use_container_width=True):
+    cadastrar_dialog()
