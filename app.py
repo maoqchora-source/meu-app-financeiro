@@ -177,5 +177,35 @@ with tab3:
     st.subheader("**PROGRESSO DAS METAS**")
     if not df_metas.empty:
         for i, m in df_metas.iterrows():
-            acum = df_invest[df_invest['Meta_Destino']==m['Nome_Meta']]['Valor_Atualizado'].sum() if notIvanildo, agora sim: aqui está o **código completo, limpo e sem duplicações**, já com o **fundo em gradiente suave** e as **abas estilizadas como botões arredondados**. Você pode substituir direto no seu `app.py`:
+            if not df_invest.empty:
+                acum = df_invest[df_invest['Meta_Destino'] == m['Nome_Meta']]['Valor_Atualizado'].sum()
+            else:
+                acum = 0
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=acum,
+                title={'text': m['Nome_Meta']},
+                gauge={'axis': {'range': [None, m['Valor_Objetivo']]},
+                       'bar': {'color': COR_PRIMARIA}}
+            ))
+            st.plotly_chart(fig, use_container_width=True)
 
+with tab5:
+    st.subheader("**ADMINISTRAÇÃO DO APP**")
+    with st.expander("**✏️ EDITAR TRANSAÇÕES (BANCO CC)**"):
+        df_e = st.data_editor(df_transacoes, num_rows="dynamic", use_container_width=True)
+        if st.button("💾 SALVAR ALTERAÇÕES"):
+            salvar_dados(df_e, 'banco_cc.csv')
+            st.toast("✅ Alterações salvas!")
+            st.rerun()
+    
+    st.divider()
+    if st.button("🚨 ZERAR TODOS OS DADOS"):
+        for a in ['banco_cc.csv', 'investimentos.csv', 'metas.csv', 'saldo_aporte.txt']:
+            if os.path.exists(a):
+                os.remove(a)
+        st.rerun()
+
+# 6. BOTÃO PRINCIPAL "NOVO LANÇAMENTO"
+if st.button("➕ NOVO LANÇAMENTO", key="btn_gravar"):
+    cadastrar_dialog()
