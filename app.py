@@ -61,9 +61,20 @@ def obter_saldo_nuvem():
         return 0.0
 
 def salvar_saldo_nuvem(valor):
-    df_conf = pd.DataFrame([[valor]], columns=['saldo_aporte'])
-    conn.update(spreadsheet=URL_PLANILHA, worksheet='config', data=df_conf)
-    st.cache_data.clear()
+    try:
+        # Criamos o DataFrame garantindo que o nome da coluna é idêntico ao da planilha
+        df_conf = pd.DataFrame([{"saldo_aporte": float(valor)}])
+        
+        # Limpa o cache ANTES para garantir que a conexão está "fresca"
+        st.cache_data.clear()
+        
+        # Grava na aba 'config'
+        conn.update(spreadsheet=URL_PLANILHA, worksheet='config', data=df_conf)
+        
+        # Limpa o cache DEPOIS para o app ler o 0.0 imediatamente
+        st.cache_data.clear()
+    except Exception as e:
+        st.error(f"Erro ao zerar saldo na planilha: {e}")
 
 # Inicialização
 cols_trans = ['Data', 'Tipo', 'Categoria', 'Descricao', 'Valor']
@@ -134,16 +145,30 @@ with tab2:
     saldo_reserva = obter_saldo_nuvem()
     if saldo_reserva > 0:
         st.warning(f"💰 Saldo Reservado: **R$ {saldo_reserva:,.2f}**")
-        with st.expander("APLICAR AGORA"):
-            t_at = st.selectbox("Tipo:", ["CDB", "LCA", "FIIs", "Ações"])
-            tx_at = st.number_input("Taxa Anual %", value=12.0)
-            nm_at = st.text_input("Papel")
-            m_dest = st.selectbox("Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"])
-            if st.button("Confirmar Aplicação"):
-                novo = pd.DataFrame([[str(date.today()), t_at, nm_at, saldo_reserva, tx_at, m_dest]], columns=cols_inv)
-                salvar_dados(pd.concat([df_invest, novo], ignore_index=True), 'investimentos')
+        with st.expander("APLICAR AGORA", expanded=True):
+            t_at = st.selectbox("Tipo:", ["CDB", "LCA", "FIIs", "Ações"], key="tipo_inv")
+            tx_at = st.number_input("Taxa Anual %", value=12.0, key="taxa_inv")
+            nm_at = st.text_input("Papel", key="papel_inv")
+            m_dest = st.selectbox("Meta:", df_metas['Nome_Meta'].tolist() if not df_metas.empty else ["Geral"], key="meta_inv")
+            
+            if st.button("✅ Confirmar Aplicação e Zerar Reserva"):
+                # 1. Cria o registro do investimento
+                novo_investimento = pd.DataFrame([[
+                    str(date.today()), t_at, nm_at, saldo_reserva, tx_at, m_dest
+                ]], columns=cols_inv)
+                
+                # 2. Salva o investimento na aba 'investimentos'
+                salvar_dados(pd.concat([df_invest, novo_investimento], ignore_index=True), 'investimentos')
+                
+                # 3. COMANDO CRÍTICO: Zera o saldo na aba 'config'
                 salvar_saldo_nuvem(0.0)
+                
+                st.success("Investimento registrado e saldo zerado!")
                 st.rerun()
+    else:
+        st.info("Não há saldo reservado para novos aportes.")
+    
+    st.subheader("Minha Carteira")
     st.dataframe(df_invest, use_container_width=True)
 
 with tab3:
