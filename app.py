@@ -117,7 +117,7 @@ saldo_disponivel = total_receitas - total_gastos
 patrimonio_total = df_invest['Valor_Aplicado'].sum() if not df_invest.empty else 0.0
 
 # 4. INTERFACE VISUAL
-st.markdown("<h1>RELATORIO FINANCEIRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1>RELATÓRIO FINANCEIRO</h1>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns([2, 2, 1])
 with col1:
