@@ -117,7 +117,7 @@ saldo_disponivel = total_receitas - total_gastos
 patrimonio_total = df_invest['Valor_Aplicado'].sum() if not df_invest.empty else 0.0
 
 # 4. INTERFACE VISUAL
-st.markdown("<h1>💼 MEU FINANCEIRO PRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1>RELATORIO FINANCEIRO</h1>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns([2, 2, 1])
 with col1:
@@ -215,7 +215,7 @@ with tab5:
 @st.dialog("📝 LANÇAR NOVA TRANSAÇÃO")
 def abrir_lancamento():
     tipo_l = st.selectbox("Tipo", ["Receita", "Gasto"])
-    cat_l = st.selectbox("Categoria", ["Salário", "Fixo", "Lazer", "Saúde", "Mercado", "Investimento"])
+    cat_l = st.selectbox("Categoria", ["Salário", "Fixo", "Lazer", "Saúde", "Mercado", "Investimento","Variavel","Trabalho"])
     desc_l = st.text_input("Descrição / Título")
     valor_l = st.number_input("Valor (R$)", min_value=0.0, step=10.0)
     data_l = st.date_input("Data", value=date.today())
